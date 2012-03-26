@@ -2,12 +2,18 @@
 /****           CONFIGURABLE PARAMETERS                                                       ****/
 /*************************************************************************************************/
 
+#define HOTTV4_TELEMETRY // Define for use of Graupner HoTT v4 telemetry usage
+#define HOTTV4_VBATLEVEL_3S VBATLEVEL2_3S // Battery level when alarm is triggered
+#define HOTTV4_UPDATE_INTERVAL 2000 // Update interval in ms for the telemetry data
+#define HOTTV4_GAM_MODULE 0x8D // General Air Module ID
+
 /* Set the minimum throttle command sent to the ESC (Electronic Speed Controller)
    This is the minimum value that allow motors to run at a idle speed  */
+#define MINTHROTTLE 1085 // for HK ESCs 18A
 //#define MINTHROTTLE 1300 // for Turnigy Plush ESCs 10A
 //#define MINTHROTTLE 1120 // for Super Simple ESCs 10A
 //#define MINTHROTTLE 1220
-#define MINTHROTTLE 1150 
+//#define MINTHROTTLE 1150 
 
 /* The type of multicopter */
 //#define GIMBAL
@@ -32,7 +38,7 @@
 //#define I2C_SPEED 400000L   //400kHz fast mode, it works only with some WMP clones
 
 //enable internal I2C pull ups
-#define INTERNAL_I2C_PULLUPS
+//#define INTERNAL_I2C_PULLUPS
 
 
 //****** advanced users settings   ****************************************
@@ -114,7 +120,7 @@
 //#define FREEIMUv035_MS  // FreeIMU v0.3.5_MS                                                <- confirmed by Alex
 //#define FREEIMUv035_BMP // FreeIMU v0.3.5_BMP
 //#define FREEIMUv04      // FreeIMU v0.4 with MPU6050, HMC5883L, MS561101BA                  <- confirmed by Alex
-//#define FREEIMUv043     // same as FREEIMUv04 with final MPU6050 (with the right ACC scale)
+#define FREEIMUv043     // same as FREEIMUv04 with final MPU6050 (with the right ACC scale)
 //#define PIPO            // 9DOF board from erazz
 //#define QUADRINO        // full FC board 9DOF+baro board from witespy  with BMP085 baro     <- confirmed by Alex
 //#define QUADRINO_ZOOM   // full FC board 9DOF+baro board from witespy  second edition       <- confirmed by Alex
@@ -235,7 +241,7 @@
 /* The following lines apply only for specific receiver with only one PPM sum signal, on digital PIN 2
    IF YOUR RECEIVER IS NOT CONCERNED, DON'T UNCOMMENT ANYTHING. Note this is mandatory for a Y6 setup on a promini
    Select the right line depending on your radio brand. Feel free to modify the order in your PPM order is different */
-//#define SERIAL_SUM_PPM         PITCH,YAW,THROTTLE,ROLL,AUX1,AUX2,AUX3,AUX4 //For Graupner/Spektrum
+#define SERIAL_SUM_PPM         PITCH,YAW,THROTTLE,ROLL,AUX1,AUX2,AUX3,AUX4 //For Graupner/Spektrum
 //#define SERIAL_SUM_PPM         ROLL,PITCH,THROTTLE,YAW,AUX1,AUX2,AUX3,AUX4 //For Robe/Hitec/Futaba
 //#define SERIAL_SUM_PPM         PITCH,ROLL,THROTTLE,YAW,AUX1,AUX2,AUX3,AUX4 //For some Hitec/Sanwa/Others
 
@@ -282,21 +288,25 @@
 
 /* this is the value for the ESCs when they are not armed
    in some cases, this value must be lowered down to 900 for some specific ESCs */
-#define MINCOMMAND 1000
+#define MINCOMMAND 950
 
 /* this is the maximum value for the ESCs at full power
    this value can be increased up to 2000 */
 #define MAXTHROTTLE 1850
 
 /* This is the speed of the serial interface. 115200 kbit/s is the best option for a USB connection.*/
-#define SERIAL_COM_SPEED 115200
+#if defined (HOTTV4_TELEMETRY) && defined (PROMINI)
+  #define SERIAL_COM_SPEED 19200
+#else
+  #define SERIAL_COM_SPEED 115200
+#endif
 
 /********************************************************************/
 /****           LCD - display and telemetry settings             ****/
 /********************************************************************/
 /* In order to save space, it's possibile to desactivate the LCD configuration functions
    comment this line only if you don't plan to used a LCD */
-#define LCD_CONF
+//#define LCD_CONF
 /* to include setting the aux switches for AUX1 and AUX2 via LCD */
 //#define LCD_CONF_AUX_12
 /* to include setting the aux switches for AUX1, AUX2, AUX3 and AUX4 via LCD */
@@ -304,7 +314,7 @@
 
 
 /* choice of LCD attached for configuration and telemetry, see notes below */
-#define LCD_SERIAL3W    // Alex' initial variant with 3 wires, using rx-pin for transmission @9600 baud fixed
+//#define LCD_SERIAL3W    // Alex' initial variant with 3 wires, using rx-pin for transmission @9600 baud fixed
 /* serial (wired or wireless via BT etc.) */
 //#define LCD_TEXTSTAR    // Cat's Whisker LCD_TEXTSTAR Module CW-LCD-02 (Which has 4 input keys for selecting menus)
 //#define LCD_VT100               // vt100 compatible terminal emulation (blueterm, putty, etc.)

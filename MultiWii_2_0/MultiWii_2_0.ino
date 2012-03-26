@@ -383,6 +383,10 @@ void setup() {
     configurationLoop();
   #endif
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
+  
+  #if defined (HOTTV4_TELEMETRY)
+    hottv4_init();
+  #endif
 }
 
 // ******** Main Loop *********
@@ -669,6 +673,14 @@ void loop () {
       float radDiff = (GPS_dir-heading) * 0.0174533f;
       GPS_angle[ROLL]  = constrain(P8[PIDGPS] * sin(radDiff) * GPS_dist / 10,-D8[PIDGPS]*10,+D8[PIDGPS]*10); // with P=5.0, a distance of 1 meter = 0.5deg inclination
       GPS_angle[PITCH] = constrain(P8[PIDGPS] * cos(radDiff) * GPS_dist / 10,-D8[PIDGPS]*10,+D8[PIDGPS]*10); // max inclination = D deg
+    }
+  #endif
+  
+  #if defined (HOTTV4_TELEMETRY) && defined (MEGA)
+    if (SerialAvailable(3)) {
+      if (SerialRead(3) == HOTTV4_GAM_MODULE) {
+        hottV4_update_telemetry();
+      }
     }
   #endif
 

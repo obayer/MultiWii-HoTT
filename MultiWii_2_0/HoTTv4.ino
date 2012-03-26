@@ -16,27 +16,54 @@ uint32_t previousMillis = 0;
 static int32_t referenceAltitude = 0;
 
 /**
+ * Wrap serial available functions for
+ * MEGA boards and remaining boards.
+ */
+uint8_t serialAvailable() {
+  #if defined (MEGA)
+    return SerialAvailable(3);
+  #else
+    return SerialAvailable(0);
+  #endif
+}
+
+/**
  * Enables RX and disables TX
  */
 void enableReceiverMode() {
-  UCSR0B &= ~_BV(TXEN0);
-  UCSR0B |= _BV(RXEN0);
+  #if defined (MEGA)  
+    UCSR3B &= ~_BV(TXEN3);
+    UCSR3B |= _BV(RXEN3);
+  #else
+    UCSR0B &= ~_BV(TXEN0);
+    UCSR0B |= _BV(RXEN0);
+  #endif
 }
 
 /**
  * Enabels TX and disables RX
  */
 void enableTransmitterMode() {
-  UCSR0B &= ~_BV(RXEN0);
-  UCSR0B |= _BV(TXEN0);
+  #if defined (MEGA)  
+    UCSR3B &= ~_BV(RXEN3);
+    UCSR3B |= _BV(TXEN3);
+  #else
+    UCSR0B &= ~_BV(RXEN0);
+    UCSR0B |= _BV(TXEN0); 
+  #endif
 }
 
 /**
  * Writes out given data to data register.
  */
 void serialWrite(uint8_t data) {
-  loop_until_bit_is_set(UCSR0A, UDRE0);
-  UDR0 = data;
+  #if defined (MEGA)
+    loop_until_bit_is_set(UCSR3A, UDRE3);
+    UDR3 = data;
+  #else
+    loop_until_bit_is_set(UCSR0A, UDRE0);
+    UDR0 = data;
+  #endif
 }
 
 /**
@@ -46,8 +73,13 @@ void serialWrite(uint8_t data) {
 void loopUntilRegistersReady() {
   delayMicroseconds(HOTT_TX_DELAY); 
   
-  loop_until_bit_is_set(UCSR0A, UDRE0);
-  loop_until_bit_is_set(UCSR0A, TXC0);
+  #if defined (MEGA)
+    loop_until_bit_is_set(UCSR3A, UDRE3);
+    loop_until_bit_is_set(UCSR3A, TXC3);
+  #else
+    loop_until_bit_is_set(UCSR0A, UDRE0);
+    loop_until_bit_is_set(UCSR0A, TXC0);
+  #endif
 }
 
 /**
@@ -135,12 +167,20 @@ void hottv4_updateAlt(uint8_t *data) {
 }
 
 /**
- * Call to initialize Telemetry data
+ * Call to initialize HOTTV4
  */
 void hottv4_init() {
   // Set start altitude for relative altitude calculation
   referenceAltitude = EstAlt;
   enableReceiverMode();
+  
+  #if defined (MEGA)
+    // Enable PullUps on RX3
+    DDRJ &= ~(1 << 0);
+    PORTJ |= (1 << 0);
+  
+    SerialOpen(3, 19200);
+  #endif
 }
 
 void hottV4_update_telemetry() {
@@ -151,7 +191,7 @@ void hottV4_update_telemetry() {
     // delay(5);
         
     // Check if line is quite to avoid collisions
-    if (Serial.available() == 0) {
+    if (serialAvailable() == 0) {
       uint8_t telemetry_data[] = { 
                   0x7C,
                   HOTT_GENERAL_AIR_MODULE_ID, /* GAM binary sensor ID */ 
@@ -188,7 +228,7 @@ void hottV4_update_telemetry() {
       hottv4_updateFuel(telemetry_data);
     #endif
     
-    #if defined(BMP085) || defined(MS561101BA)
+    #if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043)
       hottv4_updateAlt(telemetry_data);
     #endif
     
