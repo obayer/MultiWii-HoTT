@@ -1,0 +1,905 @@
+1.9 -> 2.0
+
+***you need at least Arduino 1.0 IDE to open the .ino file***
+
+Board and sensors:
+New sensor:
+  ACC MMA7544 Accelerometer. 
+  MAG MAG3110 
+
+New boards:
+  CRIUS_SE
+  CRIUS_LIGHT
+  MONGOOSE
+  CHERRY6DOFv1_0
+  DROTEK_6DOF_MPU
+
+A new processor
+  Coded by ronco based on ATMega 32U4, which can be seen
+  as an intermediate proc between 328 and 2560, allowing
+  many improvements over the 328 with nearly the same size.
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=1145
+
+
+
+STM32 port
+  A nice initiative from dongs to port multiwii to a 32bit processor.
+  This code allows also to reuse some cheap FC boards and replace the
+  firmware by a multiwii one. (boards like FreeFlight FC that can be
+  found on goodluckbuy site, or specific boards designed by dongs like AfroFlight32)
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=1193
+  http://code.google.com/p/afrodevices/
+
+
+
+Stable mode
+  BMA180 and BMA020 settings are now set to 8G.
+  The settings were formerly 2G. We noticed vibrations could cause ACC saturation
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=849
+  , causing a wrong ACC measurement, and causing a wrong PITCH/ROLL angle deduction.
+  This problem was probably the main cause of the “level drift” problem.
+  => level mode should be much better now with those sensors.
+  One consequence: TRUSTED ACC is now enabled by default and will probably
+  be removed in future versions.
+
+  The term D of the PID LEVEL settings is now used to limit the effect
+  of the level correction thanks to the suggestion of Shikra
+   (see http://www.multiwii.com/forum/viewtopic.php?f=7&t=905 ).
+  By default (D=100), the behaviour of the stable mode is unchanged.
+  With a lower D, effects are:
+   - a smoothing level change
+   - should prevent some wobbles of death
+
+
+
+Altitude hold mode:
+  There was a lot of hit and miss about this functionality.
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=562 
+  http://www.multiwii.com/forum/viewtopic.php?f=7&t=363 
+
+  Things are not perfect, but thanks to Marcin we can see a huge
+  improvement and a working alt hold with default settings *on most setups*
+  There are still some oddities to solve.
+
+  ***Velocity PID is not currently used in the code***
+
+
+
+GPS mode:
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=649
+
+  There are now 2 GPS devices supported:
+  
+  Serial GPS
+   which should be connected on a free Serial port of the FC (MEGA boards needed)
+   Must be defined in config.h
+   #define GPS_SERIAL 2 < - a free serial port
+   #define GPS_BAUD 115200
+
+   GPS POSITION HOLD and GPS RETURN to HOME are both implemented with the Serial GPS option.
+
+  I2C Serial boards
+   EOSBandi did some code to add “a specific arduino + a Serial GPS” which
+   communicates with multiwii via I2C.
+   http://code.google.com/p/i2c-gps-nav/
+   Must be defined in config.h
+   #define I2C_GPS
+
+  Position of the Home is defined once the GPS receives at least 4 satellites.
+  Then there are 2 GPS mode:
+   -ReturnToHome: when activated, the multi will go back to the GPS Home GPS coordinates.
+   -PositionHold: when activated, the multi will stay at its position.
+
+  The GPS mode needs:
+   -a very well calibrated MAG which is not disturbed by running motors.
+    (no current of magnetic fields influence on the MAG, otherwise,
+    the GPS won’t work fine)
+   -an ACC correctly tuned for level stabilization
+
+  The principle is very simple for the moment: multiwii tries to lean
+  the multi in the direction of the target point, with an angle which
+  is proportional to the distance.
+  A PID setting was added in the GUI:
+   P = angle inclination proportional to target distance
+    with P=5.0 in the GUI , 1 meter = 0.5deg inclination
+   I is currently not used
+   D = max angle inclination due to the GPS correction (15 is fine to begin)
+
+
+  Nice vids with first working GPS here:
+   EOSBandi: http://www.youtube.com/watch?v=pJJKG6uWqv4
+   nhadrian: http://www.youtube.com/watch?v=YcLJfC4h90M
+
+
+
+More motors/more servos/better output accuracy:
+
+  Thanks to ronco, the output.pde part was nearly rewritten from scratch.
+  We have now new possible combinations that were impossible before.
+
+  Better efficiency for hardware pwm: digitalWrite arduino function was
+  removed in order to address directly the output ports.
+  One consequence: motor order is no more easily configurable.
+
+  On MEGA boards: the first 6 motors are now driven by timers configured
+  in a 16 bit mode.
+  The difference is noticeable in flight for a quad.
+  It's a really nice improvement for MEGA boards running a quad for instance.
+
+  Extended motor range option (for use with wii-ESC; resolution 250 steps vs. 125 steps std.)
+  see http://www.multiwii.com/forum/viewtopic.php?f=13&t=516 for more info
+
+
+  On 328p based board (promini): we can now have the following configurations:
+   HEX (FLAT X, FLAT +, or Y6)
+    - with a standard receiver: in this case the 2 last motors are
+      on PIN A0/A1 instead of D5&D6
+    - or still with a PPM SUM receiver
+    - with 2 servos for a GIMBAL mode + 1 servo for CAM TRIG:
+     - with a PPM sum receiver: in this case, the 2 last motors are
+       on PIN D5&D6 and the servos are on PIN A0/A1/A2
+     - with a standard receiver: in this case, the 2 last motors are
+       on PIN A0/A1 and the servos are on PIN A2/D12 (no CAM trig here)
+
+   OCTO config (FLAT X, FLAT +, X8):
+    - with or without a standard receiver: on PINs 3,9,10,11,A0,A1,A2,12
+    - no servos
+
+  Config schemes are documented here:
+  http://www.multiwii.com/connecting-elements
+
+
+
+New config:
+  - Flying wing was introduced as beta, and is now successfully tested:
+    http://www.multiwii.com/forum/viewtopic.php?f=8&t=594
+  - VTAIL
+
+
+
+LCD
+  The current supported LCD are now:
+   - LCD_SERIAL_3W: Alex' initial variant with 3 wires serial
+     LCD from Sparkfun, using rx-pin for transmission @9600 baud fixed
+   - LCD_TEXTSTAR: Cat's Whisker LCD_TEXTSTAR Module CW-LCD-02
+     (Which has 4 input keys for selecting menus)
+   - LCD_VT100: vt100 compatible terminal emulation (blueterm, putty, etc.)
+     alternate GUI to any (vt-100 aware) terminal program (optionally over BT),
+     works for most tablets, smartphones, etc.
+     http://www.multiwii.com/forum/viewtopic.php?f=7&t=1096
+   - LCD_ETPP: Eagle Tree Power Panel LCD, which is a i2c device (not serial)
+   - LCD_LCD03: LCD03, which is a i2c device
+     http://www.multiwii.com/forum/viewtopic.php?f=8&t=1094
+
+  - servo midpoints (default 1500) user configurable via LCD
+    (like subtrim on computer TX) for Flying Wing and TRI
+
+
+
+LED
+  An I2C LED Ring device with 12 RBG LEDs is integrated as an option
+  in multiwii to give more feedback about sensor states.
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=902
+  http://www.dailymotion.com/video/xmdqa9_ledringmultiwii_tech
+
+
+
+HeadFree mode
+  Something similar to MK Carefree mode was added.
+  Firstly introduced by mahowik as a “simple mode”
+  http://www.multiwii.com/forum/viewtopic.php?f=7&t=925
+  A specific check box was added in the GUI to activate this mode via a switch.
+  You need to have a magnetometer and accelerometer on the board
+  Principle: The head/front will be remembered when you turn on the engines.
+    So it means that you can   turn on/off the mode during the flight.
+
+
+
+Pass-through mode
+  It’s a checkbox in the GUI.
+  The purpose is to bypass the IMU for some configs like flying wings.
+
+
+
+Beeper mode
+  It’s a checkbox in the GUI.
+  The purpose is to activate a beeper in case you have a buzzer
+  installed and you lost your multi in high grass for instance.
+
+
+
+New stick combo
+  for magneto calibration (throttle=up yaw=right pitch=down)
+
+
+
+Better magnetometer calibration
+  The calibration of the magnetometer is now more precise,
+  because it takes into account the relative strength of the magnitude
+  projection on each axis.
+  Based on a code suggested by EOSBandi:
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=1068
+
+  It should improve the GPS return to target point accuracy.
+
+
+
+Gyro smoothing
+  There are 2 options to smooth the gyros: (mainly useful for fixed wings configs)
+   - per axis based on a LPF: #define GYRO_SMOOTHING {20, 20, 3}
+     // separate averaging ranges for roll, pitch, yaw
+   - for all axis, based on a moving average (from Magnetron)
+     #define MMGYRO
+     #define MMGYROVECTORLENGHT 10 
+
+  Servo gimbal smoothing is also an option based on the same principle:
+     #define MMSERVOGIMBAL
+     #define MMSERVOGIMBALVECTORLENGHT 32
+
+
+
+Inflight ACC-calibration:
+  It’s a way to calibrate the level via on flight tests.
+  Must be defined in config.h
+  #define InflightAccCalibration
+
+  Suggested by jevermeister
+  http://www.multiwii.com/forum/viewtopic.php?f=7&t=893
+
+
+
+Coding specific improvements:
+  Less RAM memory usage via the use of PROGMEM statement
+
+  No more Arduino Serial function => the new serial communication is more efficient
+
+  Board and sensors orientation:
+   This was something that was not well coded at the beginning.
+   http://www.multiwii.com/forum/viewtopic.php?f=8&t=1259
+   This mod should not affect board definition (a remapping of axis was done)
+   About individual sensor orientation: is not the same and it’s normal,
+   there is no bug to correct here.
+
+  task state in the main loop to reduce the jitter time loop
+
+
+
+GUI
+  I2C errors status display in the GUI
+
+  New AUX3/AUX4 checkboxes.
+  We can now have many more possibilities to activate/deactivate
+  a specific function (4 switch with 3 states assuming you have a 8 channels RC system)
+  The previous CAM1/CAM2 rc channels (that are now AUX3/AUX4) are still usable
+   for an assisted   PITCH/ROLL gimbal system if the AUX3/AUX4 checkboxes are not used.
+
+  visual feedback on state of all of the auxN options
+
+  GUI reports the full MWC firmware version number
+
+  And of course, there is the nice version of WinGUI from EOSBandi
+  It is definitively more friendly than the java one,
+  allowing more features like load/write configs.
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=1229
+
+
+
+OSD
+  rushduino is basically an arduino board, with OSD capabilities.
+   It's a very flexible solution, as it is open source,
+   and it plugs on the multiwii serial port to retrieve sensors info.
+   http://www.multiwii.com/forum/viewtopic.php?f=8&t=922
+
+  MIS OSD is also updated so that multiwii can also take GPS info from the OSD,
+   or the OSD can take GPS info from multiwii
+
+
+
+
+
+1.8 -> 1.9
+    - some factorizations between PPM sum receiver code & standard receiver code
+    - EXPERIMENTAL: integration of direct SBUS receiver thanks to the contribution of Captain IxI & Zaggo
+      For this, you must use:
+         - a MEGA board
+         - the RX1 of the Serial 1 port
+         - have a way to invert the input signal.
+      more info here: http://www.multiwii.com/forum/viewtopic.php?f=7&t=289
+    - EXPERIMENTAL: integration of SPEKTRUM satellite receiver thanks to the contribution of Danal Estes
+      For this, you must use:
+         - a MEGA board
+         - the RX1 of the Serial 1 port
+      It could be used also on ProMini board with some restrictions (exclusive GUI or Spektrum use)
+      more info here: http://www.rcgroups.com/forums/showthread.php?t=1504116
+    - EXPERIMENTAL: integration of direct Serial RX, to command the multi from a Bluetooth+phone Signal for instance.
+      thanks to Luis
+    - many optimizations to reduce loop cycle
+    - GPS main function integration
+        The code to connect and recognize a GPS with NMEA sentences is here.
+        currently calculated:
+          - number of sat
+          - distance to home
+          - direction to home
+	There is currently no control code except a nice working GUI
+	=> there is no code behind GPS HOME and GPS HOLD, in progress
+    - PIN A0 and A1 instead of PIN D5 & D6 for 6 motors config and promini config
+      This mod allows the use of a standard receiver on a pro mini
+      (no need to use a PPM sum receiver)
+      #define A0_A1_PIN_HEX
+    - possibility to use PIN8 or PIN12 as the AUX2 RC input
+      it deactivates in this case the POWER PIN (pin 12) or the BUZZER PIN (pin 8)
+      #define RCAUXPIN8 or #define RCAUXPIN12
+    - thanks to Danal, integration of the Eagle Tree Power Panel LCD for configuration
+      it's an I2C LCD that should be very convenient for the ProMini because it doesn't require the unique Serial Port
+    - all in one FC:
+      QUADRINO_ZOOM board integration
+      MINIWII : Jussi's MiniWii Flight Controller
+    - sensor boards:
+      SIRIUS600       // Sirius Navigator IMU  using the WMP for the gyro
+      CITRUSv1_0      // CITRUSv1 from qcrc.ca
+      DROTEK_IMU10DOF
+    - ATAVRSBIN1 mag direction correction (http://www.multiwii.com/forum/viewtopic.php?f=8&t=506&start=60#p4950)
+    - no need to define anymore PROMINI or MEGA in the sketch:
+      this information is grabed form the board selection in Arduino IDE
+    - LEVEL drift problem:
+      the root of this problem was identified (at least partly).
+      Several options to try to solve it:
+      - adding a #define TRUSTED_ACCZ for those who have huge ACC Z variations when some throttle is applied
+        (it's a test you should do before tructing ACCZ)
+	//#define TRUSTED_ACCZ  -> ACCZ is not taken into account in calculation for small angles
+	#define TRUSTED_ACCZ    -> ACCZ is taken into account in calculation for small angles
+      - BMA180 init changes to another mode: should help to filter noisy setups
+      - adding a #define STAB_OLD_17 for those who still encounter problem with the stable code,
+        as the old 1.7 LEVEL code (less elaborated) doesn't seem to cause drift.
+     - some flying wing code upgrade (thanks to the suggestion of Hamburger)
+     - ACC added: LSM303DLx_ACC
+
+1.8 patch 2:
+    - integration of SIRIUS 9DOF + baro IMU
+    - debugging FREEIMUv035_MS baro code
+    - adding another condition in the attitude IMU calculation to take into account the ACC
+      (should help to prevent LEVEL drift problem)
+
+1.8 patch 1:
+
+MAIN SOFT: Better deadband implementation thanks to the suggestion of PeterPilot
+    http://www.multiwii.com/forum/viewtopic.php?f=7&t=608
+
+MAIN SOFT: updated PIN 46 on mega boards for CAM TRIG servo (more convenient for flyduino boards)
+
+MAIN SOFT: failsafe small bug correction thanks to jevermeister
+    prevent any motor glitch rearming in some conditions
+    http://www.multiwii.com/forum/viewtopic.php?f=8&t=610
+
+MAIN SOFT: small bug correction about BUZZERPIN, STABLEPIN, DIGITAL_TILT_PIN in MEGA board definition
+    http://www.multiwii.com/forum/viewtopic.php?f=8&t=583&start=10#p3049
+
+MAIN SOFT: OCTOP bug correction (left motor was not correctly PID mixed)
+
+GUI: minor bug correction about serial protocol, detected by Hamburger
+
+MAIN SOFT:
+    Correction from Fabio about the 5 Free IMU possibilities and the according orientations.
+
+
+
+new in 1.8 version:
+
+MAIN SOFT: code modularization.
+     There are now multiple .pde files
+     The configuration should be changed only in config.h
+     The files are opened with the Arduino IDE (open one file and the remaining files will follow)
+     This change should ease more easily the extension of MultiWii project in the future
+
+MAIN SOFT: due to the multiplication of multiwii hardware compatible boards
+     a first try to manage automatically in config.h the definition of
+	- sensors
+	- orientation
+	- I2C address
+     for the moment:
+	FFIMUv1          // first 9DOF+baro board from Jussi, with HMC5843              <- tested by Alex
+	FFIMUv2          // second version of 9DOF+baro board from Jussi, with HMC5883  <- tested by Alex
+	FREEIMUv1        // v0.1 & v0.2 & v0.3 version of 9DOF board from Fabio
+	FREEIMUv035      // FreeIMU v0.3.5 no baro
+	FREEIMUv035_MS   // FreeIMU v0.3.5_MS
+	FREEIMUv035_BMP  // FreeIMU v0.3.5_MS
+	PIPO             // 9DOF board from erazz
+	QUADRINO         // full FC board 9DOF+baro board from witespy                  <- tested by Alex
+	ALLINONE         // full FC board or standalone 9DOF+baro board from CSG_EU
+	AEROQUADSHIELDv2 // the 9DOF version of aeroquad shield v2
+	ATAVRSBIN1       // Atmel 9DOF (Contribution by EOSBandi). The board requires 3.3V power.
+     It's still however possible to declare individual sensors for a different configuration
+     If everything is commented (default conf), MultiWii assumes there is only a WMP or a WMP+NK connected.
+
+MAIN SOFT: introduction of a deadband around the stick center
+     via a #define DEADBAND. (commented by default)
+     it might help to get some accuracy from RC TX with not accurate potentiometers
+     however, as it introduces a central deadband, the TX trims are not efficient as before.
+
+MAIN SOFT: new altitude hold
+     there is now a working implementation :)
+     thanks to ziss_dm, the estimation of the altitude is more precise.
+     the Z ACC is integrated in the alt hold estimation and helps a lot to estimate short term variation
+     how-to:
+        the multi must be nearly altitude stable before the activation of altitude hold.
+        a dead band is then created around the throttle value.
+     at every moment, it's possible to still control the trhottle power when the throttle goes out of the deadband
+     this is not the best implemetation as the multi needs to be quite static before the activation, but it's a good start.
+     
+     There are 2 PIDS which are separated ans which can be used separatly.
+	ALT PID: better results are obtained with a P only term (P=4.7 I=0 D=0 is the default value)
+	VEL PID: it stands for velocity PID, more info here: (P=I=D=0 is the default value)
+            it should help to smooth every altitude varation
+            http://www.multiwii.com/forum/viewtopic.php?f=7&t=363
+
+GUI: altitude representation
+     there is an autoscale feature in the GUI to see better the altitude variation.
+     So, don't be surprised about the huge amplitude of altitude curve in the GUI.
+     The altitude is displayed in meter in the GUI.
+     A normal variation when the multi is not Z moving should be around 0.5m
+
+ALL: thank to Hamburger, integration of a power meter estimator
+     voltage reading (now available in GUI) and alarm set up.
+     (see full description and manual in config.h file)
+     more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=167
+
+MAIN SOFT: thank to Hamburger, integration of a LCD telemetry
+     very convenient with the TEXT STAR LCD and it's 4 buttons
+     for other LCDs with no button, implementation of a Telemetry autoswitching 
+     (see full description and manual in config.h file)
+
+MAIN SOFT: thanks to ziss_dm hint, gyro are calculated with more software internal resolution.
+     This should smooth the overall alttitude.
+     might not be so good with very noisy WMP copies
+
+MAIN SOFT: more settings are avalaible for the ITG3200 gyro
+     there was also a bug regarding the ITG3200 initialisation which is corrected => 2000deg/s setting is now used.
+
+     thanks to EOSBandi: ITG3200 & ITG3205 Low pass filter setting. (see the according #define in the config.h file)
+     In case you cannot eliminate all vibrations to the Gyro, you can try
+     to decrease the LPF frequency, only one step per try. As soon as twitching gone, stick with that setting.
+     It will not help on feedback wobbles, so change only when copter is randomly twiching and all dampening and
+     balancing options ran out. Uncomment only one option!
+     IMPORTANT! Change low pass filter setting changes PID behaviour, so retune your PID's after changing LPF.
+     see config.h for the related #define
+
+MAIN SOFT: New angle calculation by ziss_dm
+     it's a completly new approach wich gives a constant cycle time
+     and a representation in all attitude.
+     there are some singularity when an angle reaches 90deg. It's normal.
+
+MAIN SOFT: thanks to ziss_dm, there is another way to use the level mode.
+     no overshoot is possible, but the reaction time is longer
+     more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=503
+
+MAIN SOFT: code rework: RX rate/expo is now interpolated via a lookup table without any float.
+
+GUI: thanks to shama, disparition of warning messages
+
+MAIN SOFT: thanks to C2po , some more tuning on BMA180 I2C initialization.
+
+ALL: 3 octo configs are now supported on mega boards: OCTOX8 (dual coax quadX), OCTOFLAT+, OCTOFLATX
+     motor order: PIN 3,5,6,2,7,8,9,10
+     OCTOX8:
+         REAR_R , FRONT_R , REAR_L , FRONT_L , UNDER_REAR_R , UNDER_FRONT_R , UNDER_REAR_L , UNDER_FRONT_L
+     OCTOFLATP:
+         FRONT_L , FRONT_R , REAR_R , REAR_L , FRONT , RIGHT , REAR , LEFT
+     OCTOFLATX:
+         MIDFRONT_L , FRONT_R , MIDREAR_R , REAR_L , FRONT_L , MIDFRONT_R , REAR_R , MIDREAR_L
+     one detail: the GUI is not yet adapted to display the 8 motors & the according 3D representation on the right
+
+MAIN SOFT: PITCH&TILT camera compenstation with channel 7 & 8 is now working
+     - must be used with SERVO_TILT option
+     - TILT/ROLL inclination compensation is still trigged by CAMSTAB GUI checkbox option
+
+GUI: improvment by Hamburger
+     improvement to the devices list in the gui and that got me to tuning it a bit more.
+       - list is still too short for my amount of known devices - some vertical space is unused,
+          so longer box is possible
+       - on mac, for each bt-device I get two device files:
+          cu.name and tty.name. using the tty.name is recommended by arduino documentation,
+          so do not add the cu.name devices to list
+       - remove leading tty. from names to use limited space for readability.
+
+LCD: improvment by Hamburger: exit without save from EEPROM menu
+     You can use the LCD quite extensively for viewing values - especially with development versions.
+     Therefore there is a need to exit the LCD config loop without doing a complete write to eeprom.
+     The eeprom is limited to only 100.000 write cycles.
+
+ALL: thanks to Cass3825, new optional arming procedure via an AUX switch
+     this option is activated only if at least one checkbox is checked on the line "ARM"
+     the motors won't arm if the copter is plugged while the tx switch is in the armed position.
+     you must use the switch to disarm position then back to arm position in order to arm the motors.
+
+     Another 'feature' worth mentioning is that changes in the switch position are only
+     acknowledged when the throttle stick is all the way down.
+     This prevents accidentally arming the motors at mid or full throttle.
+     One downside is that the motors will not disarm unless the throttle stick is all the way down.
+
+ALL: it's now possible to calibrate the MAG from the GUI (and mandatory for the first time)
+	once activated, the LED will flash very fast for 30s
+	you have exactly 30s to move the multi in all possible direction
+	(one full turn on each axis is sufficient)
+	There is no order to respect, but it is important to cover every directions.
+
+GUI: introduction of MAG 3 axis raw values
+
+MAIN SOFT: BI-COPTER PIN 6 servo correction
+
+MAIN SOFT: thanks to jevermeister,
+      the failsafe function of the PPM sum receiver was a little mofified and can handle better
+      unusual signal patterns with short pulses.
+
+
+
+
+
+1.7 list of differences with the 1.6
+
+ALL: BARO is more precise, but still not perfect (1m to 2m amplitude). Note it's a code issue, not a baro component issue.
+
+ALL: RC channels AUX2, CAM1 CAM2 added. only relevant for PPM SUM stream or MEGA boards.
+ 	On the 328p with a standard receiver, only the first 5 channels are recognized.
+ 	CAM1 and CAM2 controls are not yet implemented.
+
+ALL: AUX1 and AUX2 switches are fully customizable via a 3 state position.
+	We can activate/deactivate individually  level mode (ACC), baro or compass (mag).
+	It's a generic approach which lets other possibilities to control things in the future.
+	With this principle, it's possible to activate permanently the options you want even if you have only 4 channels 
+	(replace the FORCE LEVEL option)
+
+ALL: CAM triger option:
+	a servo can be connected on digital pin A2 (pro mini) to activate the trigger of a camera
+	the option can be activated or deactivated via the button configuration panel AUX1/AUX2
+	#define CAM_SERVO_HIGH 2000  // the position of HIGH state servo
+	#define CAM_SERVO_LOW 1020   // the position of LOW state servo
+	#define CAM_TIME_HIGH 1000   // the duration of HIGH state servo expressed in ms
+	#define CAM_TIME_LOW 1000    // the duration of LOW state servo expressed in ms
+	the PIN on arduino mega is also A2, but this is not the final PIN mapping
+
+ALL CAM stab (servo tilt) button option:
+	the servo tilt option can be activated or deactivated via the button configuration panel AUX1/AUX2
+
+ALL: BI COPTER is now a avatar style implementation.
+	on a pro mini: 9 motor left, 10 motor right, 11 servo left, 3 servo right
+	on mega: 3 motor left, 5 motor right, 6 servo left, 2 servo right
+
+ALL: addition of Y4 (not tested)
+	on a pro mini: motors 9,10,11,3
+	on mega: motors 3,5,6,2
+	REAR1 , FRONT R , REAR2 , FRONT L
+
+ALL: addition of HEX6X (not tested)
+	on a pro mini: motors 9,10,11,3,6,5
+	on mega: motors 3,5,6,2,7,8
+	REAR_R , FRONT_R , REAR_L , FRONT_L , RIGHT , LEFT
+
+ALL: new level mode
+	The level mode is completely redesigned with a coherent independent trim
+	There a now a PI control loop for level mode based on angle estimation.
+	The old auto level strength value was a sort of P only control loop.
+	With the new code, the I term allows to refine the remaining angular error for a better angle positioning accuracy.
+	With an RC rate = 1, the angle at full stick is around 45deg => a flip should never happen in this mode.
+
+MAIN SOFT: software trim for stable mode
+	It is now possible to adjust the trim of the level mode to match the same TX trim used for the acro mode.
+	1) disarm the motors
+	2) full throttle (must be >1900)
+	3) full PITCH forward/backward and full ROLL left/right (2 axis possibilities) will trim the level mode according to 
+	the neutral angle you want to change. The status LED will blink to confirm each ticks.
+
+MAIN SOFT: new calibration procedure
+	The ACC calibration differs now from the gyro calibration.
+	gyro calibration: it's still done at each power on. It's also possible manually as before: min throttle+full pitch 
+	backward+full yaw left.
+	acc calibration: motor disarmed, full throttle up, full pitch backward+full yaw left.
+
+MAIN SOFT: it was in 1.6 but not mentioned. it's possible to arm/disarm motors
+	either via min throttle + full yaw stick or full roll stick.
+
+MAIN SOFT: anti yaw jump modification for multi with 4 motors or more
+
+MAIN SOFT: servo range for tricopter 
+	#define TRI_YAW_CONSTRAINT_MIN 1020
+	#define TRI_YAW_CONSTRAINT_MAX 2000
+
+MAIN SOFT: thanks to Ciskje, integration of L3G4200D gyro (this Gyro is present in PIPO ISU)
+
+MAIN SOFT: HMC5883 compass integration 
+
+MAIN SOFT: compass lock now works
+	the option can be activated or deactivated via the button configuration panel AUX1/AUX2
+	the lock is activated 1s after the stick release
+	the lock is maintained only if the YAW stick in centred +/- 50
+	In some case, especially with the 5883, the mag must be calibrated otherwise, the direction is not good.
+	The calibration procedure is not yet implemented.
+
+MAIN SOFT: there was a bug on servo tilt (it came back to zero at around 45deg due to a variable overflow)
+
+MAIN SOFT: thanks to Syberian, a bug was corrected to prevent ACC correction just before hovering.
+         It could explain  some odd flips when using autolevel at the beginning
+
+MAIN SOFT: thanks to ziss_dm, a bug was corrected about the ITG3200: there was a variable
+	overflow which occured only for high PITCH variation.
+
+MAIN SOFT: thanks to mis_b (MIS), integration of failsafe code.
+ 	Failsafe detect absence of RC pulse on THROTTLE channel (standard PPM receiver)
+ 	If the pulse is OFF the failsafe procedure is initiated.
+
+ 	After configurable FAILSAVE_DELAY time of pulse absence,
+ 	the level mode is switched to ON (if ACC or nunchuk is available),
+ 	PITCH, ROLL and YAW is centered and THROTTLE is set to FAILSAVE_THROTTLE value.
+ 	This value is dependent from your configuration, AUW and some other params.
+
+ 	Next, afrer configurable FAILSAVE_OFF_DELAY time,
+ 	the copter is disarmed, and motors are stopped.
+ 	If RC pulse coming back before reached FAILSAVE_OFF_DELAY time,
+ 	after the small quard time the RC control is returned to normal.
+
+	The fail-safe can be deactivated via #define
+
+MAIN SOFT: thanks to ziss_dm, nunchuk alone integration (incompatible with WMP and seen as a standalone I2C ACC)
+
+MAIN SOFT: bug correction the mag indication was reversed
+
+MAIN SOFT: small bug correction in angle calculation (conversion rad->1/10 deg)
+
+MAIN SOFT: added a small delay after ITG3200 init to have a better calibration
+
+MAIN SOFT: thanks to zara,
+	vbat code simplification + low pass filter.
+	vbat activation via #define.
+	coupling alarm with status LED
+
+MAIN SOFT: reduce the PPM sum recognition delay between 2 sequences (5ms->3ms).
+	might be the source of frsky PPM sum problem
+
+GUI: 3D copter attitude visualization
+
+GUI: ACC calibration. there is now a calibrate button to calibrate the ACC directly from the GUI
+	(it resets the soft trim)
+
+GUI: thanks to Eberhard, better display of serial ports on Mac OS X and Linux
+
+GUI: the memory leak bug GUI is corrected
+
+GUI and LCD: D is now positive (to avoid confusion in explanations)
+
+LCD: all parameters are now customizable via the LCD thanks to the work initiated by Shirka.
+	This first one is still P  for both ROLL&PITCH as it is the most used.
+
+LCD: implementation of TextStar LCD tanks to Hamburger & gtrick90 code
+
+OSD: implementation of MIS code thanks to Rurek
+         thanks to Rurek and mis_b, optimisation of OSD code Serial write is driven by a switchable interrupt,
+         minimising  delay to transmit data
+
+SITE: www.multiwii.com was updated accordingly.
+
+SPECIAL NOTE ABOUT THE PULL-UPS:
+- they are now enable by default
+- WARNING if you use I2C devices that don't support 5V.
+
+- If you use a WMP alone: enable it in soft
+- If you use a WMP + NK : enable it in soft
+- If you use a WMP + BMP020 (5V friendly thanks to its LLC): enable it in soft
+- If you use a WMP + (LLC + I2C devices): enable it in soft
+- If you use a WMP + direct I2C bus connection I2C devices (not 5V friendly): disable it in soft and use external 
+pull-ups on 3.3V. note that most breakout boards are built with pullups already available.
+
+
+
+
+1.6 list of differences with the 1.5
+
+  - MIDRC in a #define configuration : allow to choose another stick center position for specific TX
+
+  - Free Flight IMU integrated, designed by Jussi (see specific rcgroups topic). Front orientation = Y arrow
+	- Gyro ITG3200 integration : note this version uses a different I2C address of the sparkfun breakout ITG3200 board
+		the ITG3200 replaces the WMP once the #define line is uncommented. Can be used as a single sensor if needed.
+	- Acc BMP180: thanks to the code of Opie, but I changed the orientation to match FFIMU
+		it works fine and is activated with mode selection.
+ 	- Magnetometer HMC5843: for the moment integrated for visualization purpose only in the GUI. works only for inclination<25deg
+	- Baro BMP085: it acts as a celling and is activated with mode selection.
+		Not well implemented for the moment, big jump. To deactivate it, it's possible to comment the #define line
+
+  - pullups are now de activated by default, there is a #define INTERNAL_I2C_PULLUPS to activate them.
+	the de activation of pullups is mandatory for a FFIMU direct connection with no LLC
+
+  - support of the following ACCs: BMA180, BMA020, ADXL345. Thanks to the contribution of mgros, opie11 and Point65
+
+  - GUI: new buttons to indicate the presence of sensors.
+
+  - bug corrected (thanks to Bo): in some case with a WMP + annex ACC,
+    WMP data was interpreted as NK data yaw jump correction modification (less present)
+
+  - remove old way to init motor and calibrate. No more full throttle fear.
+
+  - corrected: PIN5&6 switch bug for HEX6 and Y6
+
+  - Arduino MEGA integration
+    thanks to the work initiated by Mariano,
+    I completed it to be be fully compatible with Arduino MEGA boards (all configs and options).
+    With MEGA boards like seeeduino,
+      it's possible to have some config impossible to have with a pro mini: Y6+standard receiver+tilt servos
+
+    it's just a #define to switch
+    #define PROMINI or #define MEGA  //Arduino type
+
+    The PIN assignment for RC&motors is compatible with Aeroquad shield mega 2.x
+
+    PIN for MEGA board, not definitive, Jussi is preparing a shield with a different PIN mapping
+
+    PPM_SUM 19 (now separated from RC_THROTTLE assignment)
+    RC_THROTTLE 62 (=A8)
+    RC_ROLL 63 (=A9)
+    RC_PITCH 64 (=A10)
+    RC_YAW 65 (=A11)
+    RC_MODE 66 (=A12)
+    RC_AUX(not used) 67 (=A13)
+    RC_7(not used) 68 (=A14)
+    RC_8(not used) 69 (=A15)
+    I2C SDA 20
+    I2C SCL 21
+    FRONTMOTORPIN 2 (on 328p was 3) = servo for tricopter
+    REARMOTORPIN 3 (on 328p was 9)
+    RIGHTMOTORPIN 5 (on 328p was 10)
+    LEFTMOTORPIN 6 (on 328p was 11)
+    Y6RIGHT(HEXFRONT) 7 (on 328p was 6)
+    Y6LEFT(HEXREAR) 8 (on 328p was 5)
+    V_BAT_MONITOR A3
+    TILT&GIMBAL&WING A0/A1
+    POWERPIN 12
+
+  - a bug seen by Mariano in stable mode (sqrt on a negative number) is corrected 
+
+  - TILT ROLL&PITCH is now compatible with TRICOPTER configuration
+
+  - anti gyro glitch : I re introduced a limitation between 2 reads as it seemed to be more stable. Info from Point65.
+
+  - RC rate can be extended to 5. With this option, we should see a more linear response on pitch/roll sticks for very acrobatic setups.
+
+  - on quadris we can notice some “yaw jumps” when the yaw is suddenly stopped.
+    There is now a function to smooth the stop.
+    If you don't like it just remove the line axisPID[YAW] = constrain(axisPID[YAW],-100-abs(rcCommand[YAW]),+100+abs(rcCommand[YAW]));
+
+  - sketch: I added an  “advanced users settings” part with a description of some more tunning possibilities.
+
+  - If the ACC is present (Nunchuk or other I2C), you won't be able to arm the motors until you do a proper ACC calibration manually.
+    If the calibration is not done or if the multi is too much inclinated, the status LED will slowly blink every 1s.
+
+
+
+
+1.5 list of differences with the 1.4
+
+#define MOTOR_STOP
+this is an alternative method to stop immediately the motors when the throttle command is in low position
+HEX6 added
+motor pin :
+//REAR_R => PIN 9
+//FRONT_R => PIN 10
+//REAR_L => PIN 11
+//FRONT_L => PIN 3
+//FRONT => PIN 6
+//REAR => PIN 5
+
+anti gyro glitch : the time we neutralize data after a hard reset is increased. The impact of gyro glitches is greatly reduced. I can even fly safely with a bad WMP copy doing a hard reset every 5s.
+
+suppression of throttle rate pid curve: replaced by only one relevant value. PID can decrease proportionally between [1500-2000] throttle position (helps to prevent wobbling in fast translation).
+
+internal soft simplification: EEPROM, serial communication, motor naming.
+
+stable mode is greatly improved.
+
+support of ADXL345 I2C acc. Benefit: the loop time WMP+ADXL345 is reduced, allowing a better stability, comparable to a WMP only conf. Obviously, ADXL345 must not be connected with a with a NK setup.The integration of BMA020 I2C acc should be easy because the code frame is ready.
+
+when a NK is detected, the LED blink is much longer after the init step => it's a way to visualize the good detection of a nunchuk.
+
+support of BMP085 I2C barometer. But for visualization purpose only. It can't be activated yet for altitude stabilization.
+
+Known issue:the trim in acro mode is different of the trim in stable mode.
+
+Note:
+if you use a NK or a ADXL345 acc. You must do a manual calibration to see good results in gui
+- stable mode with NK should indicate 0 / 0 / 200 acc values
+- stable mode with ADXL345 should indicate 0 / 0 / 250 acc values
+- If you have a constant +/- 400 values on the graph, the calibration is not done.
+for the WMP+ADXL345 setup: (+/-BMP085 for curious)
+- D12 +1 diode is used to poser the WMP
+- a 3.3V is used to power the ADXL345 (stabilized alim or multiple LED from a 5V source)
+to reset parameters to default: just upload an old version and the new again.
+this version is compatible with everything designed before (WMP only conf or WMP+NK)
+
+
+
+
+
+
+
+
+1.4:
+Serial PPM:
+	more explanation on //#define SERIAL_SUM_PPM
+	only one line to comment/uncomment in order to activate it
+	a bug was corrected about the number of channel
+
+integration of Y6
+	the code of the working test version is now merged
+
+integration of pitch/roll servo stabilization (compatible only with QUAD+ and QUADX setup)
+	SERVO_TILT_PITCH_PIN: A0
+	SERVO_TILT_ROLL_PIN:  A1
+	- for each servo, it is possible to set up diferent parameters directly in the sketch (no GUI interraction)
+	TILT_PITCH_MIN    1020    //servo travel min, don't set it below 1020
+	TILT_PITCH_MAX    2000    //servo travel max, max value=2000
+	TILT_PITCH_MIDDLE 1500    //servo neutral value
+	TILT_PITCH_PROP   10      //servo proportional (tied to angle) ; can be negative to invert movement
+
+integration of a GIMBAL configuration : mix of pitch/roll angle + input stick servo stabilization
+	this is the same as previous, but is is a pure gimbal system (no ESC)
+	the input RC stick position is mixed with the angle calculation
+
+suppression of AXIS RATE PID curve which was not enough comprehensible . Replaced by 2 more versatile boxes:
+	- ROLL/PITCH RATE: to increase the rotation rate for ROLL&PITCH axis
+	- YAW RATE: to increase the rotation rate for ROLL&PITCH axis
+	0 = default soft rate ; 0.7 = acro rate ; 1 = insane rate (be careful with 1 setting, it's very violent)
+
+longer blinking LED after each calibration
+
+new calibration approach
+	at each initialization:
+		the gyro calibration is done
+		the acc calibration is done only for a pure gimbal setup
+		for other setups, the acc is retrieved from the EEPROM
+	on demand (via full left yaw stick + full pitch low stick):
+		the gyro calibration is done
+		the acc calibration is done and store in the EERPOM
+	=> the acc calibration must be done at least once on demand.
+
+adding a #define to supress LCD code in order to save memory space
+
+autolevel strength: the last range was [0;10]. The new range is [0;25] with a reduction weight of 2.5 => more precision for tunning.
+
+
+
+
+
+1.2:
+I pushed a little further the optimization of code size, it's now only 14k.
+A lot of work to reduce LCD code without affecting the desired result.
+There would be now enough room in the Arduino to run 2 TriiWii code.
+It's mainly useful for old Arduino cards with only a 168p inside and half memory.(we can still find these cards less priced on ebay)
+The range of parameters is extended in the GUI.
+- BI copter mode with 2 servos is introduced, but not yet tested on a real model. I tested only the reaction in the GUI. 
+
+
+
+
+
+
+1.1:
+A lot of code change:
+most float operations in the critical parts (PID loop) are replaced by int operations 
+protocol between GUI and arduino is simplified 
+LCD code rewrote 
+EEPROM code rewrote 
+There is no new functionalities, it's more an optimization.
+But it increases the speed of the code, and it is also much smaller (19k->15k) 
+
+
+
+
+
+1.0:
+This is a new version which first aim is to consolidate what has already be developed in the thread.
+I rename it TriWii to MultiWii as the soft is now designed also for QUAD copter
+There are some real improvements and changes:
+Sketch: support of TRI, QUAD+ and QUADX 
+Sketch: support of PPM SUM input signal of digital pin 2 
+Arduino: PIN remapping ! (see the previous posts and main site). Think about doing some soldering before an upgrade from the previous TriWii 
+GUI: better PITCH/ROLL representation and representation of the model inclination 
+GUI: support of TRI, QUAD+ and QUADX, automatically recognized 
+GUI: ACC graph enabled by default 
+Site: partially updated, but the main part is ok
+The stabilization WMP and NK+WMP is not different from the previous version. 
