@@ -295,7 +295,7 @@
 #define MAXTHROTTLE 1850
 
 /* This is the speed of the serial interface. 115200 kbit/s is the best option for a USB connection.*/
-#if defined (HOTTV4_TELEMETRY) && defined (PROMINI)
+#if defined (HOTTV4_TELEMETRY) && !defined (MEGA)
   #define SERIAL_COM_SPEED 19200
 #else
   #define SERIAL_COM_SPEED 115200
