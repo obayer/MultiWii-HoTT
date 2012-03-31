@@ -115,8 +115,8 @@ void serialCom() {
       serialize16(intPowerTrigger1);
       serialize8(vbat);
       serialize16(BaroAlt/10);             // 4 variables are here for general monitoring purpose
-      serialize16(debug2);
-      serialize16(debug3);
+      serialize16(annex650_overrun_count);
+      serialize16(cycleTimeMax);
       serialize16(debug4);
       serialize8('M');
       UartSendData();

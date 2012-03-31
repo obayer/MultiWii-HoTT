@@ -295,7 +295,7 @@
 #define MAXTHROTTLE 1850
 
 /* This is the speed of the serial interface. 115200 kbit/s is the best option for a USB connection.*/
-#if defined (HOTTV4_TELEMETRY) && !defined (MEGA)
+#if defined (HOTTV4_TELEMETRY) && !defined(__AVR_ATmega2560__)
   #define SERIAL_COM_SPEED 19200
 #else
   #define SERIAL_COM_SPEED 115200
@@ -494,7 +494,7 @@
 /* to log values like max loop time and others to come */
 /* logging values are visible via LCD config */
 /* set to 2, if you want powerconsumption on a per motor basis (this uses the big array and is a memory hog, if POWERMETER <> PM_SOFT) */
-//#define LOG_VALUES 1
+#define LOG_VALUES 1
 
 /* to add debugging code */
 /* not needed and not recommended for normal operation */
