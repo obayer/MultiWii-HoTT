@@ -485,7 +485,7 @@
    with R1=33k and R2=51k
    vbat = [0;1023]*16/VBATSCALE */
 #define VBAT              // comment this line to suppress the vbat code
-#define VBATSCALE     131 // change this value if readed Battery voltage is different than real voltage
+#define VBATSCALE     130 // change this value if readed Battery voltage is different than real voltage
 #define VBATLEVEL1_3S 107 // 10,7V
 #define VBATLEVEL2_3S 103 // 10,3V
 #define VBATLEVEL3_3S 99  // 9.9V
@@ -494,7 +494,7 @@
 /* to log values like max loop time and others to come */
 /* logging values are visible via LCD config */
 /* set to 2, if you want powerconsumption on a per motor basis (this uses the big array and is a memory hog, if POWERMETER <> PM_SOFT) */
-#define LOG_VALUES 1
+//#define LOG_VALUES 1
 
 /* to add debugging code */
 /* not needed and not recommended for normal operation */

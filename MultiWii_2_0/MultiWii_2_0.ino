@@ -344,6 +344,14 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       LEDPIN_TOGGLE;
     }
   #endif
+  
+  #if defined (HOTTV4_TELEMETRY) && defined (MEGA)
+    if (SerialAvailable(3)) {
+      if (SerialRead(3) == HOTTV4_GAM_MODULE) {
+        hottV4UpdateTelemetry();
+      }
+    }
+  #endif
 }
 
 
@@ -385,7 +393,7 @@ void setup() {
   ADCSRA |= _BV(ADPS2) ; ADCSRA &= ~_BV(ADPS1); ADCSRA &= ~_BV(ADPS0); // this speeds up analogRead without loosing too much resolution: http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1208715493/11
   
   #if defined (HOTTV4_TELEMETRY)
-    hottv4_init();
+    hottv4Init();
   #endif
 }
 
@@ -472,6 +480,7 @@ void loop () {
         if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK || rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
         if (rcDelayCommand == 20) {
+          hottv4Setup();
           armed = 1;
           headFreeModeHold = heading;
         }
@@ -676,14 +685,6 @@ void loop () {
     }
   #endif
   
-  #if defined (HOTTV4_TELEMETRY) && defined (MEGA)
-    if (SerialAvailable(3)) {
-      if (SerialRead(3) == HOTTV4_GAM_MODULE) {
-        hottV4_update_telemetry();
-      }
-    }
-  #endif
-
   //**** PITCH & ROLL & YAW PID ****    
   for(axis=0;axis<3;axis++) {
     if (accMode == 1 && axis<2 ) { //LEVEL MODE

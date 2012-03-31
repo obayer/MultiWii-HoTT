@@ -25,7 +25,7 @@ void serialCom() {
     switch (sr = SerialRead(0)) {
     #if defined(HOTTV4_TELEMETRY)
     case HOTTV4_GAM_MODULE:
-      hottV4_update_telemetry();
+      hottV4UpdateTelemetry();
     break;
     #endif
     #ifdef BTSERIAL

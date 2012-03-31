@@ -3,7 +3,7 @@
 #if defined(HOTTV4_TELEMETRY)
 
 #define HOTT_GENERAL_AIR_MODULE_ID 0x8D
-#define HOTT_TX_DELAY 600
+#define HOTT_TX_DELAY 650
 
 #define ALARM_DRIVE_VOLTAGE 0x10
 
@@ -169,7 +169,7 @@ void hottv4_updateAlt(uint8_t *data) {
 /**
  * Call to initialize HOTTV4
  */
-void hottv4_init() {
+void hottv4Init() {
   // Set start altitude for relative altitude calculation
   referenceAltitude = EstAlt;
   enableReceiverMode();
@@ -183,10 +183,17 @@ void hottv4_init() {
   #endif
 }
 
-void hottV4_update_telemetry() {
+/**
+ * Initializes parameters e.g. relative high
+ */
+void hottv4Setup() {
+  referenceAltitude = EstAlt;
+}
+
+void hottV4UpdateTelemetry() {
   if ((millis() - previousMillis) > HOTTV4_UPDATE_INTERVAL) {
     previousMillis = millis();   
-    
+
     // One-Wire protocoll specific "Idle line"
     // delay(5);
         
