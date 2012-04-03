@@ -480,7 +480,10 @@ void loop () {
         if (rcDelayCommand == 20) armed = 0; // rcDelayCommand = 20 => 20x20ms = 0.4s = time to wait for a specific RC command to be acknowledged
       } else if ( (rcData[YAW] > MAXCHECK || rcData[ROLL] > MAXCHECK) && rcData[PITCH] < MAXCHECK && armed == 0 && calibratingG == 0 && calibratedACC == 1) {
         if (rcDelayCommand == 20) {
-          hottv4Setup();
+          #if defined (HOTTV4_TELEMETRY)
+            hottv4Setup();
+          #endif
+          
           armed = 1;
           headFreeModeHold = heading;
         }
