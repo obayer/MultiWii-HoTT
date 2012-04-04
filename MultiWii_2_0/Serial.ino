@@ -24,7 +24,7 @@ void serialCom() {
   if (SerialAvailable(0)) {
     switch (sr = SerialRead(0)) {
     #if defined(HOTTV4_TELEMETRY)
-    case HOTTV4_GENERAL_AIR_MODULE:
+    case HOTTV4_ELECTRICAL_AIR_MODULE:
       hottV4UpdateTelemetry();
     break;
     #endif

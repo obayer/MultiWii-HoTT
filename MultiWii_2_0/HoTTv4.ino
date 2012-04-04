@@ -3,6 +3,7 @@
 #if defined(HOTTV4_TELEMETRY)
 
 #define HOTTV4_GENERAL_AIR_SENSOR 0xD0
+#define HOTTV4_ELECTRICAL_AIR_SENSOR 0xE0
 
 #if !defined (HOTTV4_TX_DELAY) 
   #define HOTTV4_TX_DELAY 600
@@ -137,24 +138,10 @@ void hottV4_triggerAlarm(uint8_t *data, uint8_t alarm) {
  */
 void hottv4_updateBattery(uint8_t *data) {
   data[30] = vbat; 
-  data[12] = vbat;
   
   // Activate low voltage alarm and above 5.0V
   if (vbat < HOTTV4_VBATLEVEL_3S && vbat > 50) {
     hottV4_triggerAlarm(data, ALARM_DRIVE_VOLTAGE);
-  }
-}
-
-/**
- * Updates the relative Fuel value.
- * 12,6 V = 100% 
- * HOTTV4_VBATLEVEL_3S = 0%
- */
-void hottv4_updateFuel(uint8_t *data) {  
-  if (vbat >= HOTTV4_VBATLEVEL_3S) {
-    data[18] =  ((vbat - HOTTV4_VBATLEVEL_3S) * 100) / 21;
-  } else {
-    data[18] = 0;
   }
 }
 
@@ -165,8 +152,8 @@ void hottv4_updateFuel(uint8_t *data) {
 void hottv4_updateAlt(uint8_t *data) {  
   int32_t alt = ((EstAlt - referenceAltitude) / 100) + 500;
   
-  data[23] = alt & 0xFF;
-  data[24] = (alt >> 8) & 0xFF;
+  data[26] = alt & 0xFF;
+  data[27] = (alt >> 8) & 0xFF;
 }
 
 /**
@@ -204,38 +191,33 @@ void hottV4UpdateTelemetry() {
     if (serialAvailable() == 0) {
       uint8_t telemetry_data[] = { 
                   0x7C,
-                  HOTTV4_GENERAL_AIR_MODULE, /* GAM binary sensor ID */ 
+                  HOTTV4_ELECTRICAL_AIR_MODULE, 
                   0x00, /* Alarm */
-                  HOTTV4_GENERAL_AIR_SENSOR, /* GAM Sensor ID */
+                  HOTTV4_ELECTRICAL_AIR_SENSOR,
                   0x00, 0x00, /* Alarm Value 1 and 2 */
-                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Voltage Cell 1-6 in 2mV steps, 210 == 4,20V */
+                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Low Voltage Cell 1-7 in 2mV steps */
+                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* High Voltage Cell 1-7 in 2mV steps */
                   0x00, 0x00, /* Battetry 1 LSB/MSB in 100mv steps, 50 == 5V */
                   0x00, 0x00, /* Battetry 2 LSB/MSB in 100mv steps, 50 == 5V */
                   0x14, /* Temp 1, Offset of 20. 20 == 0C */ 
                   0x14, /* Temp 2, Offset of 20. 20 == 0C */
-                  0x00, /* Fuel Scala, 0..100 */
-                  0x00, 0x00, /* Fuel */
-                  0x00, 0x00, /* RPM. 10er steps, 300 == 3000rpm */
                   0xF4, 0x01, /* Height. Offset -500. 500 == 0 */
-                  0x48, 0x00, /* m2s */ 
-                  0x78, /* m3s */
-                  0x00, 0x00, /* Current LSB, LSB, MSB */
+                  0x00, 0x00, /* Current LSB, MSB 1 = 0.1A */
                   0x00, 0x00, /* Drive Voltage */
                   0x00, 0x00,  /* mAh */
-                  0x00, 0x00, /*  Speed */
-                  0x00, /* Lowest Cell Voltage */
-                  0x00, /* Cell Number Lowest Cell Voltage */
-                  0x00, 0x00, /* 2nd RPM */
-                  0x00, /* General Error Number */
-                  0x00, /* High Pressure till 16 bar, 0,1 steps, 20 == 2,0bar */
+                  0x48, 0x00, /* m2s */ 
+                  0x78, /* m3s */
+                  0x00, 0x00, /* RPM. 10er steps, 300 == 3000rpm */
+                  0x00, /* Electric minutes */
+                  0x00, /* Electric seconds */
+                  0x00, /* Speed */
                   0x00, /* Version Number */
                   0x7D, /* End sign */
-                  0xC0 /* Checksum */
+                  0x00 /* Checksum */
                 };
       
     #if defined(VBAT)
       hottv4_updateBattery(telemetry_data);
-      hottv4_updateFuel(telemetry_data);
     #endif
     
     #if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043)
