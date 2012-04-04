@@ -3,6 +3,7 @@
 #if defined(HOTTV4_TELEMETRY)
 
 #define HOTT_GENERAL_AIR_MODULE_ID 0x8D
+#define HOTT_GENERAL_AIR_SENSOR_ID 0xD0
 
 #if !defined (HOTT_TX_DELAY) 
   #define HOTT_TX_DELAY 600
@@ -206,7 +207,7 @@ void hottV4UpdateTelemetry() {
                   0x7C,
                   HOTT_GENERAL_AIR_MODULE_ID, /* GAM binary sensor ID */ 
                   0x00, /* Alarm */
-                  0xD0, /* GAM Sensor ID */
+                  HOTT_GENERAL_AIR_SENSOR_ID, /* GAM Sensor ID */
                   0x00, 0x00, /* Alarm Value 1 and 2 */
                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Voltage Cell 1-6 in 2mV steps, 210 == 4,20V */
                   0x00, 0x00, /* Battetry 1 LSB/MSB in 100mv steps, 50 == 5V */
