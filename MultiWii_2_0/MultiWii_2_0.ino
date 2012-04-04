@@ -347,7 +347,7 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
   
   #if defined (HOTTV4_TELEMETRY) && defined (MEGA)
     if (SerialAvailable(3)) {
-      if (SerialRead(3) == HOTTV4_GAM_MODULE) {
+      if (SerialRead(3) == HOTTV4_GENERAL_AIR_MODULE) {
         hottV4UpdateTelemetry();
       }
     }

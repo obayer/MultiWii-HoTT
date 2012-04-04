@@ -2,11 +2,10 @@
 
 #if defined(HOTTV4_TELEMETRY)
 
-#define HOTT_GENERAL_AIR_MODULE_ID 0x8D
-#define HOTT_GENERAL_AIR_SENSOR_ID 0xD0
+#define HOTTV4_GENERAL_AIR_SENSOR 0xD0
 
-#if !defined (HOTT_TX_DELAY) 
-  #define HOTT_TX_DELAY 600
+#if !defined (HOTTV4_TX_DELAY) 
+  #define HOTTV4_TX_DELAY 600
 #endif
 
 #define ALARM_DRIVE_VOLTAGE 0x10
@@ -75,7 +74,7 @@ void serialWrite(uint8_t data) {
  * TX register is empty.
  */
 void loopUntilRegistersReady() {
-  delayMicroseconds(HOTT_TX_DELAY); 
+  delayMicroseconds(HOTTV4_TX_DELAY); 
   
   #if defined (MEGA)
     loop_until_bit_is_set(UCSR3A, UDRE3);
@@ -100,7 +99,7 @@ void hottV4_write(uint8_t *data, uint8_t length) {
     crc = crc + data[index]; 
     serialWrite(data[index]);
     
-    delayMicroseconds(HOTT_TX_DELAY); 
+    delayMicroseconds(HOTTV4_TX_DELAY); 
    }
    
   uint8_t crcVal = crc & 0xFF;
@@ -205,9 +204,9 @@ void hottV4UpdateTelemetry() {
     if (serialAvailable() == 0) {
       uint8_t telemetry_data[] = { 
                   0x7C,
-                  HOTT_GENERAL_AIR_MODULE_ID, /* GAM binary sensor ID */ 
+                  HOTTV4_GENERAL_AIR_MODULE, /* GAM binary sensor ID */ 
                   0x00, /* Alarm */
-                  HOTT_GENERAL_AIR_SENSOR_ID, /* GAM Sensor ID */
+                  HOTTV4_GENERAL_AIR_SENSOR, /* GAM Sensor ID */
                   0x00, 0x00, /* Alarm Value 1 and 2 */
                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Voltage Cell 1-6 in 2mV steps, 210 == 4,20V */
                   0x00, 0x00, /* Battetry 1 LSB/MSB in 100mv steps, 50 == 5V */
