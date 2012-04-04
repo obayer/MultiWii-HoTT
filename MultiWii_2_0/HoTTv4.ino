@@ -3,7 +3,10 @@
 #if defined(HOTTV4_TELEMETRY)
 
 #define HOTT_GENERAL_AIR_MODULE_ID 0x8D
-#define HOTT_TX_DELAY 650
+
+#if !defined (HOTT_TX_DELAY) 
+  #define HOTT_TX_DELAY 600
+#endif
 
 #define ALARM_DRIVE_VOLTAGE 0x10
 
