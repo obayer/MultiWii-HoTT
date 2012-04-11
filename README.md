@@ -10,7 +10,7 @@ Sensor data are continously gathered by the flight control software. Every 2 sec
 that conforms to the HoTT protocol specifications and send to the receiver via MCUs serial interface (RX0TX0 on non Mega2560 platforms, RX3TX3 on Mega2560).
 Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
 
-What's Meeded
+What's Needed
 ------------
 1. HoTT v4 capable RxTx system
 2. Enabled telemetry downlink channel on the receiver
