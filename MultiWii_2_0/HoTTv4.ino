@@ -90,7 +90,7 @@ void loopUntilRegistersReady() {
  * Write out given telemetry data to serial interface.
  * Given CRC is ignored and calculated on the fly.
  */ 
-void hottV4_write(uint8_t *data, uint8_t length) {
+void hottV4Write(uint8_t *data, uint8_t length) {
   uint16_t crc = 0;
   
   /* Enables TX / Disables RX */
@@ -115,17 +115,17 @@ void hottV4_write(uint8_t *data, uint8_t length) {
 
 /**
  * Write out given telemetry data to serial interface. Data
- * are treated as binary sensor format and therefore only the first 45 bytes are written out.
+ * are treated as in binary sensor format and therefore only the first 45 bytes are written out.
  * CRC is ignored and calculacted on the fly.
  */
-void hottV4_binary_format_write(uint8_t *data) {
-  hottV4_write(data, 44);
+void hottV4WriteBinaryFormat(uint8_t *data) {
+  hottV4Write(data, 44);
 }
 
 /**
  * Triggers an alarm signal
  */
-void hottV4_triggerAlarm(uint8_t *data, uint8_t alarm) {
+void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
   data[2] = alarm;
 }
 
@@ -139,9 +139,9 @@ void hottV4_triggerAlarm(uint8_t *data, uint8_t alarm) {
 void hottv4_updateBattery(uint8_t *data) {
   data[30] = vbat; 
   
-  // Activate low voltage alarm and above 5.0V
+  // Activate low voltage alarm if above 5.0V
   if (vbat < HOTTV4_VBATLEVEL_3S && vbat > 50) {
-    hottV4_triggerAlarm(data, ALARM_DRIVE_VOLTAGE);
+    hottV4TriggerAlarm(data, ALARM_DRIVE_VOLTAGE);
   }
 }
 
@@ -149,9 +149,10 @@ void hottv4_updateBattery(uint8_t *data) {
  * Updates the Altitude value using EstAlt (cm).
  * Result is displayed in meter.
  */
-void hottv4_updateAlt(uint8_t *data) {  
+void hottv4UpdateAlt(uint8_t *data) {  
   int32_t alt = ((EstAlt - referenceAltitude) / 100) + 500;
   
+  // Sets altitude high and low byte
   data[26] = alt & 0xFF;
   data[27] = (alt >> 8) & 0xFF;
 }
@@ -165,7 +166,9 @@ void hottv4Init() {
   enableReceiverMode();
   
   #if defined (MEGA)
-    // Enable PullUps on RX3
+    /* Enable PullUps on RX3
+     * without signal is to weak to be recognized
+     */
     DDRJ &= ~(1 << 0);
     PORTJ |= (1 << 0);
   
@@ -185,7 +188,7 @@ void hottV4UpdateTelemetry() {
     previousMillis = millis();   
 
     // One-Wire protocoll specific "Idle line"
-    // delay(5);
+     delay(5);
         
     // Check if line is quite to avoid collisions
     if (serialAvailable() == 0) {
@@ -217,15 +220,15 @@ void hottV4UpdateTelemetry() {
                 };
       
     #if defined(VBAT)
-      hottv4_updateBattery(telemetry_data);
+      hottv4UpdateBattery(telemetry_data);
     #endif
     
     #if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043)
-      hottv4_updateAlt(telemetry_data);
+      hottv4UpdateAlt(telemetry_data);
     #endif
     
-      // Write out telemetry data as General Air Module to serial           
-      hottV4_binary_format_write(telemetry_data);
+      // Write out telemetry data as Electric Air Module to serial           
+      hottV4WriteBinaryFormat(telemetry_data);
     }
   }
 }
