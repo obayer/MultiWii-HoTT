@@ -12,11 +12,11 @@ Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Ai
 
 What's Meeded
 ------------
-1.) HoTT v4 capable RxTx system
-2.) Enabled telemetry downlink channel on the receiver
-3.) RxTx signal cable from MCUs UART Pins to receiver input/output channel (on GR-12 it's channel 5). Be advised that the MCU
+1. HoTT v4 capable RxTx system
+2. Enabled telemetry downlink channel on the receiver
+3. RxTx signal cable from MCUs UART Pins to receiver input/output channel (on GR-12 it's channel 5). Be advised that the MCU
 uses 5V TTL, whereas the HoTT receiver needs a 3,3V TTL (LLC is needed).
-4.) Update your MCU with this compiled project (please review config.h before uploading to match your settings).
+4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
 
 Configuration
 -------------
