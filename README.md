@@ -7,7 +7,7 @@ HoTT v4 capable RxTx systems from [Graupner] are used. Licensed under [GPLv3].
 How It Works
 ------------
 Sensor data are continously gathered by the flight control software. Every 2 seconds selected sensor data (e.g. LiPo voltage) are packed into a format
-that conforms to the HoTT protocol specifications and send to the receiver via MCUs serial interface (RX0TX0 on non Mega2560 platforms, RX3TX3 on Mega2560).
+that conforms to the HoTT protocol specifications and is beeing sent to the receiver via MCUs serial interface (RX0TX0 on non Mega2560 platforms, RX3TX3 on Mega2560).
 Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
 
 What's Needed
