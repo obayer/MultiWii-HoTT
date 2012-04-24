@@ -20,12 +20,15 @@ void serialCom() {
   #if defined(GPS_FROM_OSD)
     uint8_t *rptr;
   #endif
-
+  
   if (SerialAvailable(0)) {
     switch (sr = SerialRead(0)) {
     #if defined(HOTTV4_TELEMETRY)
     case HOTTV4_ELECTRICAL_AIR_MODULE:
-      hottV4UpdateTelemetry();
+      hottV4SendTelemetry();
+    break;
+    case HOTTV4_TEXTMODE:
+      hottV4SendSettings();
     break;
     #endif
     #ifdef BTSERIAL
