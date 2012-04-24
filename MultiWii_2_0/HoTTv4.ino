@@ -188,7 +188,7 @@ void hottV4UpdateTelemetry() {
     previousMillis = millis();   
 
     // One-Wire protocoll specific "Idle line"
-     delay(5);
+    // delay(5);
         
     // Check if line is quite to avoid collisions
     if (serialAvailable() == 0) {
