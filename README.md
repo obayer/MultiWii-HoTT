@@ -1,8 +1,9 @@
 MultiWii Meets HoTT
 ==============
 MultiWii is a flight control system created by [Alexinparis] mainly for MultiRotor systems.
-This projects contains an extension for the current MultiWii 2.0 software to send in flight telemetry data, if 
-HoTT v4 capable RxTx systems from [Graupner] are used. Licensed under [GPLv3].
+This projects contains an extension for the current MultiWii 2.0 software to send in flight telemetry data, 
+and report current settings of the flight system, if HoTT v4 capable RxTx systems from [Graupner] are used.
+Licensed under [GPLv3].
 
 How It Works
 ------------
@@ -26,6 +27,10 @@ Available Telemetry Data
 --------------
 * VBAT
 * Relative high over ground
+
+Available Settings (currently readonly)
+--------------
+* Roll, Pitch, Yaw, Alt, GPS, Level, and Mag PID values 
 
 Supported MCU Hardware
 ----------------------
