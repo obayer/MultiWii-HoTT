@@ -105,7 +105,7 @@ void hottV4LoopUntilRegistersReady() {
  * Write out given telemetry data to serial interface.
  * Given CRC is ignored and calculated on the fly.
  */ 
-void hottV4Write(uint8_t *data, uint8_t length) {
+void hottV4SendBinary(uint8_t *data, uint8_t length) {
   uint16_t crc = 0;
   
   /* Enables TX / Disables RX */
@@ -125,15 +125,6 @@ void hottV4Write(uint8_t *data, uint8_t length) {
   /* Enables RX / Disables TX */
   hottV4EnableReceiverMode();
 } 
-
-/**
- * Write out given telemetry data to serial interface. Data
- * are treated as in binary sensor format and therefore only the first 45 bytes are written out.
- * CRC is ignored and calculacted on the fly.
- */
-void hottV4WriteBinaryFormat(uint8_t *data) {
-  hottV4Write(data, 44);
-}
 
 /**
  * Triggers an alarm signal
@@ -246,7 +237,7 @@ void hottV4SendTelemetry() {
     #endif
     
       // Write out telemetry data as Electric Air Module to serial           
-      hottV4WriteBinaryFormat(telemetry_data);
+      hottV4SendBinary(telemetry_data, 44);
     }
   }
 }
@@ -254,6 +245,9 @@ void hottV4SendTelemetry() {
 /* #####################################################################
  *                HoTTv4 Text Mode
  * ##################################################################### */
+ 
+static char *rowLabels[] = { "ROLL :", "PITCH:", "YAW  :", "ALT  :", "GPS  :", "LEVEL:", "MAG  :" };
+static int settingsIndexes[] = { 0, 1, 2, PIDALT, PIDGPS, PIDLEVEL, PIDMAG }; 
 
 /**
  * Sends a char
@@ -353,16 +347,14 @@ uint16_t hottV4SendTextline(char *line) {
  * @return crc value
  */
 uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
-  static char *labels[] = {"ROLL :", "PITCH:", "YAW  :", "ALT  :", "GPS  :", "LEVEL:", "MAG  :"};
-  static int label2Index[] = {0, 1, 2, PIDALT, PIDGPS, PIDLEVEL, PIDMAG}; 
-  
   uint16_t crc = 0;
   crc += hottV4SendTextline(" MultiWii MEETS HoTT");
   
-  for (int8_t index = 0; index < countof(labels); index++) {
+  for (int8_t index = 0; index < countof(rowLabels); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;
-    uint8_t i = label2Index[index];
-    crc += hottV4SendFormattedTextline(labels[index], P8[i], I8[i], D8[i], col);
+    uint8_t i = settingsIndexes[index];
+
+    crc += hottV4SendFormattedTextline(rowLabels[index], P8[i], I8[i], D8[i], col);
   }
    
   return crc; 
@@ -371,7 +363,7 @@ uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
 /**
  * Send Header for Text Mode
  */
-uint16_t hottV4SendHeader() {
+uint16_t hottV4SendTextModeHeader() {
   uint16_t crc = 0;
   
   hottV4SerialWrite(0x7B);
@@ -394,7 +386,7 @@ void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
   hottV4EnableTransmitterMode();
   uint16_t crc = 0;
 
-  crc += hottV4SendHeader();
+  crc += hottV4SendTextModeHeader();
   crc += hottV4SendFormattedTextblock(selectedRow, selectedCol);
   
   hottV4SerialWrite(0x7D);
@@ -408,6 +400,28 @@ void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
 }
 
 /**
+ * Updates the system wide PID settings.
+ * @param row Which row is currently selected in the menu --> ROLL, PITCH, YAW, etc.
+ * @param col Which column is currently selected -> P, I, D
+ * @parma val Adds val to currently selected PID value
+ */
+void hottV4UpdatePIDValue(int8_t row, int8_t col, int8_t val) {
+  int8_t pidIndex = settingsIndexes[row - 1];
+  
+  switch (col) {
+    case 2:
+      P8[pidIndex] += val;
+      break;
+    case 3:
+      I8[pidIndex] += val;
+      break;
+    case 4:
+      D8[pidIndex] += val;
+      break;
+  } 
+}
+
+/**
  * Main method to send PID settings
  */
 void hottV4SendSettings() {
@@ -415,6 +429,8 @@ void hottV4SendSettings() {
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
   if (!armed) {
+    void (*foo)(int8_t, int8_t);
+    
     static int8_t row = 1;
     static int8_t col = 1;
   
@@ -423,16 +439,27 @@ void hottV4SendSettings() {
     uint8_t data = hottV4SerialRead();
     delay(5);
       
-    if (data == 0xEF) {
-      hottV4SendText(row, col);
-    } else if (data == 0xEB && row > 1) {
-      hottV4SendText(--row, col);
-    } else if (data == 0xED && row < 7) {
-      hottV4SendText(++row, col);
+    if (data == 0xEB) {
+      if (col == 1) {
+        if (row > 1) {
+          row--;
+        }
+      } else {
+        hottV4UpdatePIDValue(row, col, -1);
+      }
+    } else if (data == 0xED) {
+      if (col == 1) {
+        if (row < 7) {
+          row++; 
+        }
+      } else {
+        hottV4UpdatePIDValue(row, col, 1);
+      }
     } else if (data == 0xE9) {
       col = (col < 4) ? col+1 : 1;
     }
+    
+    hottV4SendText(row, col);
   }
 }
-
 #endif
