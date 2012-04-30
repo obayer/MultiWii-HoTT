@@ -13,7 +13,7 @@
 #define countof(X) ( (size_t) ( sizeof(X)/sizeof*(X) ) )
 
 // Last time telemetry data were updated
-uint32_t previousMillis = 0;
+static uint32_t previousMillis = 0;
 
 /** Stores current altitude level, so telemetry altitude
  * prints relative hight from ground.
@@ -24,7 +24,7 @@ static int32_t referenceAltitude = 0;
  * Wrap serial available functions for
  * MEGA boards and remaining boards.
  */
-uint8_t hottV4SerialAvailable() {
+static uint8_t hottV4SerialAvailable() {
   #if defined (MEGA)
     return SerialAvailable(3);
   #else
@@ -35,7 +35,7 @@ uint8_t hottV4SerialAvailable() {
 /**
  * Enables RX and disables TX
  */
-void hottV4EnableReceiverMode() {
+static void hottV4EnableReceiverMode() {
   #if defined (MEGA)  
     UCSR3B &= ~_BV(TXEN3);
     UCSR3B |= _BV(RXEN3);
@@ -48,7 +48,7 @@ void hottV4EnableReceiverMode() {
 /**
  * Enabels TX and disables RX
  */
-void hottV4EnableTransmitterMode() {
+static void hottV4EnableTransmitterMode() {
   #if defined (MEGA)  
     UCSR3B &= ~_BV(RXEN3);
     UCSR3B |= _BV(TXEN3);
@@ -61,7 +61,7 @@ void hottV4EnableTransmitterMode() {
 /**
  * Writes out given data to data register.
  */
-void hottV4SerialWrite(uint8_t data) {
+static void hottV4SerialWrite(uint8_t data) {
   #if defined (MEGA)
     loop_until_bit_is_set(UCSR3A, UDRE3);
     UDR3 = data;
@@ -76,7 +76,7 @@ void hottV4SerialWrite(uint8_t data) {
 /**
  * Read from Serial interface
  */
-uint8_t hottV4SerialRead() {
+static uint8_t hottV4SerialRead() {
   #if defined (MEGA)
     return SerialRead(3);
   #else
@@ -88,7 +88,7 @@ uint8_t hottV4SerialRead() {
  * Wait until Data Register is empty and
  * TX register is empty.
  */
-void hottV4LoopUntilRegistersReady() {
+static void hottV4LoopUntilRegistersReady() {
   delayMicroseconds(HOTTV4_TX_DELAY); 
   
   #if defined (MEGA)
@@ -104,7 +104,7 @@ void hottV4LoopUntilRegistersReady() {
  * Write out given telemetry data to serial interface.
  * Given CRC is ignored and calculated on the fly.
  */ 
-void hottV4SendBinary(uint8_t *data, uint8_t length) {
+static void hottV4SendBinary(uint8_t *data, uint8_t length) {
   uint16_t crc = 0;
   
   /* Enables TX / Disables RX */
@@ -128,7 +128,7 @@ void hottV4SendBinary(uint8_t *data, uint8_t length) {
 /**
  * Triggers an alarm signal
  */
-void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
+static void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
   data[2] = alarm;
 }
 
@@ -139,7 +139,7 @@ void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
  * Max. value = 25,6V 
  * If value is below HOTTV4_VBATLEVEL_3S, telemetry alarm is triggered
  */
-void hottv4UpdateBattery(uint8_t *data) {
+static void hottv4UpdateBattery(uint8_t *data) {
   // Only for investigating nasty VBAT reporting bug
   //data[30] = vbat;
   data[30] = vbat; 
@@ -154,7 +154,7 @@ void hottv4UpdateBattery(uint8_t *data) {
  * Updates the Altitude value using EstAlt (cm).
  * Result is displayed in meter.
  */
-void hottv4UpdateAlt(uint8_t *data) {  
+static void hottv4UpdateAlt(uint8_t *data) {  
   int32_t alt = ((EstAlt - referenceAltitude) / 100) + 500;
   
   // Sets altitude high and low byte
@@ -252,7 +252,7 @@ static int settingsIndexes[] = { 0, 1, 2, PIDALT, PIDGPS, PIDLEVEL, PIDMAG };
  * Sends a char
  * @param inverted Char is getting displayed inverted if > 0
  */
-uint8_t hottV4SendChar(char c, uint8_t inverted) {
+static uint8_t hottV4SendChar(char c, uint8_t inverted) {
   // Add 128 for inverse display
   uint8_t inverse = (inverted > 0) ? 128 : 0;
   uint8_t data = c + inverse;
@@ -268,7 +268,7 @@ uint8_t hottV4SendChar(char c, uint8_t inverted) {
  *
  * @return crc value
  */
-uint16_t hottV4SendWord(char *w, uint8_t inverted) {
+static uint16_t hottV4SendWord(char *w, uint8_t inverted) {
   uint16_t crc = 0;
   
   for (uint8_t index = 0; ; index++) {
@@ -292,7 +292,7 @@ uint16_t hottV4SendWord(char *w, uint8_t inverted) {
  *
  * @return crc value
  */
-uint16_t hottV4SendFormattedTextline(char *text, int8_t p, int8_t i, int8_t d, int8_t selectedCol) {
+static uint16_t hottV4SendFormattedTextline(char *text, int8_t p, int8_t i, int8_t d, int8_t selectedCol) {
   uint16_t crc = 0;
   
   char label[8];
@@ -322,7 +322,7 @@ uint16_t hottV4SendFormattedTextline(char *text, int8_t p, int8_t i, int8_t d, i
  * Sends one line of text max. 21 chars. If less than 21 chars, rest
  * is filled with whitespace chars.
  */
-uint16_t hottV4SendTextline(char *line) {
+static uint16_t hottV4SendTextline(char *line) {
   uint16_t crc = 0;
   uint8_t useZeroBytes = 0;
   
@@ -345,14 +345,14 @@ uint16_t hottV4SendTextline(char *line) {
  *
  * @return crc value
  */
-uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
+static uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
   crc += hottV4SendTextline(" MultiWii MEETS HoTT");
   
   for (int8_t index = 0; index < countof(rowLabels); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;
     uint8_t i = settingsIndexes[index];
-
+    
     crc += hottV4SendFormattedTextline(rowLabels[index], P8[i], I8[i], D8[i], col);
   }
    
@@ -362,7 +362,7 @@ uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
 /**
  * Send Header for Text Mode
  */
-uint16_t hottV4SendTextModeHeader() {
+static uint16_t hottV4SendTextModeHeader() {
   uint16_t crc = 0;
   
   hottV4SerialWrite(0x7B);
@@ -381,7 +381,7 @@ uint16_t hottV4SendTextModeHeader() {
 /**
  * Sends the complete text mode frame
  */
-void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
+static void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
   hottV4EnableTransmitterMode();
   uint16_t crc = 0;
 
@@ -404,7 +404,7 @@ void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
  * @param col Which column is currently selected -> P, I, D
  * @parma val Adds val to currently selected PID value
  */
-void hottV4UpdatePIDValue(int8_t row, int8_t col, int8_t val) {
+static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   int8_t pidIndex = settingsIndexes[row - 1];
   
   switch (col) {
@@ -420,6 +420,14 @@ void hottV4UpdatePIDValue(int8_t row, int8_t col, int8_t val) {
   } 
 }
 
+static uint8_t isInEditingMode(int8_t col) {
+  return col == 1;
+}
+
+static uint8_t canSelectNextLine(int8_t row) {
+  return (row > 0) && (row < 8);
+}
+
 /**
  * Main method to send PID settings
  */
@@ -427,9 +435,7 @@ void hottV4SendSettings() {
   // Saftey measure because it takes way to long to send data in text mode
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
-  if (!armed) {
-    void (*foo)(int8_t, int8_t);
-    
+  if (!armed) {    
     static int8_t row = 1;
     static int8_t col = 1;
   
@@ -439,20 +445,20 @@ void hottV4SendSettings() {
     delay(5);
       
     if (data == 0xEB) {
-      if (col == 1) {
-        if (row > 1) {
+      if (isInEditingMode(col)) {
+        if (canSelectNextLine(row-1)) {
           row--;
         }
       } else {
-        hottV4UpdatePIDValue(row, col, -1);
+        hottV4UpdatePIDValueBy(row, col, -1);
       }
     } else if (data == 0xED) {
-      if (col == 1) {
-        if (row < 7) {
+      if (isInEditingMode(col)) {
+        if (canSelectNextLine(row+1)) {
           row++; 
         }
       } else {
-        hottV4UpdatePIDValue(row, col, 1);
+        hottV4UpdatePIDValueBy(row, col, 1);
       }
     } else if (data == 0xE9) {
       col = (col < 4) ? col+1 : 1;
