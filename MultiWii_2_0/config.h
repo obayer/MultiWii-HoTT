@@ -6,6 +6,7 @@
 #define HOTTV4_VBATLEVEL_3S VBATLEVEL2_3S // Battery level when alarm is triggered
 #define HOTTV4_UPDATE_INTERVAL 2000 // Update interval in ms for the telemetry data
 #define HOTTV4_ELECTRICAL_AIR_MODULE 0x8E // Electric Air Module ID
+#define HOTTV4_TEXTMODE 0x7F // Electrical Air Module Text Mode ID
 
 /* Set the minimum throttle command sent to the ESC (Electronic Speed Controller)
    This is the minimum value that allow motors to run at a idle speed  */
