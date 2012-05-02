@@ -413,7 +413,7 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   switch (col) {
     case 2:
       P8[pidIndex] += val;
-      P8[pidIndex] = constrain(P8[pidIndex], 0, 40);
+      P8[pidIndex] = constrain(P8[pidIndex], 0, 200);
       break;
     case 3:
       I8[pidIndex] += val;
