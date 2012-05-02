@@ -5,6 +5,9 @@
 #define HOTTV4_GENERAL_AIR_SENSOR 0xD0
 #define HOTTV4_ELECTRICAL_AIR_SENSOR 0xE0
 
+#define NO 0
+#define YES 1
+
 #if !defined (HOTTV4_TX_DELAY) 
   #define HOTTV4_TX_DELAY 625
 #endif
@@ -410,20 +413,31 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   switch (col) {
     case 2:
       P8[pidIndex] += val;
+      P8[pidIndex] = constrain(P8[pidIndex], 0, 40);
       break;
     case 3:
       I8[pidIndex] += val;
+      I8[pidIndex] = constrain(I8[pidIndex], 0, 250);
       break;
     case 4:
       D8[pidIndex] += val;
+      D8[pidIndex] = constrain(D8[pidIndex], 0, 100);
       break;
   } 
 }
 
+/**
+ * Determines if current selected col can be edited.
+ * Returns 1 if given col can be edited, everything else otherwise.
+ */
 static uint8_t isInEditingMode(int8_t col) {
-  return col == 1;
+  return col > 1;
 }
 
+/**
+ * Determines if given row can be selected as next line.
+ * Returns 1 if next line can be selected, everything else otherwise.
+ */
 static uint8_t canSelectNextLine(int8_t row) {
   return (row > 0) && (row < 8);
 }
@@ -445,7 +459,7 @@ void hottV4SendSettings() {
     delay(5);
       
     if (data == 0xEB) {
-      if (isInEditingMode(col)) {
+      if (NO == isInEditingMode(col)) {
         if (canSelectNextLine(row-1)) {
           row--;
         }
@@ -453,7 +467,7 @@ void hottV4SendSettings() {
         hottV4UpdatePIDValueBy(row, col, -1);
       }
     } else if (data == 0xED) {
-      if (isInEditingMode(col)) {
+      if (NO == isInEditingMode(col)) {
         if (canSelectNextLine(row+1)) {
           row++; 
         }
