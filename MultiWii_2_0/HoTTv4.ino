@@ -13,7 +13,6 @@
 #endif
 
 #define ALARM_DRIVE_VOLTAGE 0x10
-#define countof(X) ( (size_t) ( sizeof(X)/sizeof*(X) ) )
 
 // Last time telemetry data were updated
 static uint32_t previousMillis = 0;
@@ -247,11 +246,32 @@ void hottV4SendTelemetry() {
 /* #####################################################################
  *                HoTTv4 Text Mode
  * ##################################################################### */
- 
-static char *rowLabels[] = { "ROLL :", "PITCH:", "YAW  :", "ALT  :", "GPS  :", "LEVEL:", "MAG  :" };
-static int settingsIndexes[] = { 0, 1, 2, PIDALT, PIDGPS, PIDLEVEL, PIDMAG }; 
 
-/**
+// Number of Rows without Header that can be displayed
+#define ROWS 7
+
+// Defines which controller values can be changed for ROLL, PITCH, YAW, etc.
+typedef enum {
+  HoTTv4ControllerValueP = 1 << 0,
+  HoTTv4ControllerValuePID = 1 << 1,
+} HoTTv4ControllerValue;
+
+// Defines structure of Preamble text, the corresponding PID index
+typedef struct {
+  char *label;
+  uint8_t pidIndex;
+  HoTTv4ControllerValue controllerValue;
+} HoTTv4TextModeData;
+
+static HoTTv4TextModeData settings[] = { {"ROLL :", 0, HoTTv4ControllerValuePID}, 
+                                         {"PITCH:", 1, HoTTv4ControllerValuePID},
+                                         {"YAW  :", 2, HoTTv4ControllerValuePID},
+                                         {"ALT  :", PIDALT, HoTTv4ControllerValuePID},
+                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuePID},
+                                         {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuePID},
+                                         {"MAG  :", PIDMAG, HoTTv4ControllerValueP} }; 
+ 
+ /**
  * Sends a char
  * @param inverted Char is getting displayed inverted if > 0
  */
@@ -286,37 +306,80 @@ static uint16_t hottV4SendWord(char *w, uint8_t inverted) {
 }
 
 /**
+ * Sends the given P Value as a formatted text element, e.g. 4.5
+ * @return crc value
+ */
+static uint16_t hottV4SendFormattedPValue(int8_t p, int8_t inverted) {
+  char formatted_P[5];
+  // Unfortunately no floats are supported in Arduinos snprintf http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1164927646     
+  snprintf(formatted_P, 5, "%2d.%01d", p / 10, p % 10);
+  
+  return hottV4SendWord(formatted_P, inverted);
+}
+
+/**
+ * Sends the given I Value as a formatted text element, e.g. 0.012
+ * @return crc value
+ */
+static uint16_t hottV4SendFormattedIValue(int8_t i, int8_t inverted) {
+  char formatted_I[6];
+  snprintf(formatted_I, 6, "0.%03d", i);
+  
+  return hottV4SendWord(formatted_I, inverted);
+}
+
+/**
+ * Sends the given D Value as a formatted text element, e.g. 23
+ * @return crc value
+ */
+static uint16_t hottV4SendFormattedDValue(int8_t d, int8_t inverted) {
+  char formatted_D[4];
+  snprintf(formatted_D, 4, "%3d", d);
+  
+  return hottV4SendWord(formatted_D, inverted);
+}
+
+/**
  * Sends one text line consiting of 21 digits.
- * @param text Preamble text e.g. ROLL
- * @param p P value which is displayed
- * @param i I value which is displayed
- * @param d D value which is displayed
+ * @param textData Cotains all data needed to display PID values
  * @param selectedCol If > 0 text, p, i, or d column will be selected
  *
  * @return crc value
  */
-static uint16_t hottV4SendFormattedTextline(char *text, int8_t p, int8_t i, int8_t d, int8_t selectedCol) {
+static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
   uint16_t crc = 0;
   
+  // void * to fix this stupid arduino prototyping f***  http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1195036223
+  HoTTv4TextModeData *textData = (HoTTv4TextModeData *)data;
+  uint8_t index = textData->pidIndex;
+  
   char label[8];
-  char formated_P[5];
-  char formated_I[6];
-  char formated_D[4];
-
   char selectionIndicator = (selectedCol > 0) ? '>' : ' ';
 
-  // Unfortunately no floats are supported in Arduinos snprintf http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1164927646     
-  snprintf(label, 8, "%c%s", selectionIndicator, text);
-  snprintf(formated_P, 5, "%2d.%01d", p / 10, p % 10);
-  snprintf(formated_I, 6, "0.%03d", i);
-  snprintf(formated_D, 4, "%3d", d);
-  
+  snprintf(label, 8, "%c%s", selectionIndicator, textData->label);  
   crc += hottV4SendWord(label, 0);
-  crc += hottV4SendWord(formated_P, 2 == selectedCol);
+  
+  if (textData->controllerValue & (HoTTv4ControllerValueP | HoTTv4ControllerValuePID)) {
+      crc += hottV4SendFormattedPValue(P8[index], 2 == selectedCol);
+  } else {
+    crc += hottV4SendWord(" -- ", 0);
+  }
+ 
   crc += hottV4SendChar(' ', 0);
-  crc += hottV4SendWord(formated_I, 3 == selectedCol);
+  
+  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
+    crc += hottV4SendFormattedIValue(I8[index], 3 == selectedCol);
+  } else {
+    crc += hottV4SendWord(" --- ", 0);
+  }
+  
   crc += hottV4SendChar(' ', 0);
-  crc += hottV4SendWord(formated_D, 4 == selectedCol);
+  
+  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
+    crc += hottV4SendFormattedDValue(D8[index], 4 == selectedCol);
+  } else {
+    crc += hottV4SendWord(" - ", 0);
+  }
   
   return crc;
 }
@@ -352,11 +415,9 @@ static uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selected
   uint16_t crc = 0;
   crc += hottV4SendTextline(" MultiWii MEETS HoTT");
   
-  for (int8_t index = 0; index < countof(rowLabels); index++) {
-    int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;
-    uint8_t i = settingsIndexes[index];
-    
-    crc += hottV4SendFormattedTextline(rowLabels[index], P8[i], I8[i], D8[i], col);
+  for (int8_t index = 0; index < ROWS; index++) {
+    int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;    
+    crc += hottV4SendFormattedTextline(&settings[index], col);
   }
    
   return crc; 
@@ -408,7 +469,7 @@ static void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
  * @parma val Adds val to currently selected PID value
  */
 static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
-  int8_t pidIndex = settingsIndexes[row - 1];
+  int8_t pidIndex = settings[row - 1].pidIndex;
   
   switch (col) {
     case 2:
