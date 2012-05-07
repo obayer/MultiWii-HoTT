@@ -537,6 +537,7 @@ void hottV4SendSettings() {
   if (!armed) {    
     static int8_t row = 1;
     static int8_t col = 1;
+    static uint8_t dirty = 0;
     
     while(hottV4SerialAvailable() <= 1) {}
   
@@ -550,6 +551,7 @@ void hottV4SendSettings() {
         }
       } else {
         hottV4UpdatePIDValueBy(row, col, -1);
+        dirty = 1;
       }
     } else if (data == 0xED) {
       if (NO == isInEditingMode(col)) {
@@ -558,10 +560,16 @@ void hottV4SendSettings() {
         }
       } else {
         hottV4UpdatePIDValueBy(row, col, 1);
+        dirty = 1;
       }
     } else if (data == 0xE9) {
       HoTTv4ControllerValues controllerValue = settings[row].controllerValue;
       col = nextCol(col, controllerValue);
+      
+      if (dirty > 0) {
+        dirty = 0;
+        writeParams();
+      }
     }
     
     hottV4SendText(row, col);
