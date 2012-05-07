@@ -243,8 +243,8 @@ void hottV4SendTelemetry() {
   }
 }
 
-/* #####################################################################
- *                HoTTv4 Text Mode
+/* ##################################################################### *
+ *                HoTTv4 Text Mode                                       *
  * ##################################################################### */
 
 // Number of Rows without Header that can be displayed
@@ -252,24 +252,27 @@ void hottV4SendTelemetry() {
 
 // Defines which controller values can be changed for ROLL, PITCH, YAW, etc.
 typedef enum {
-  HoTTv4ControllerValueP = 1 << 0,
-  HoTTv4ControllerValuePID = 1 << 1,
-} HoTTv4ControllerValue;
+  HoTTv4ControllerValuesP = 1 << 0,
+  HoTTv4ControllerValuesPID = 1 << 1,
+} HoTTv4ControllerValues;
 
-// Defines structure of Preamble text, the corresponding PID index
+// Defines structure of Preamble text, the corresponding PID index, which PID values can be changed.
 typedef struct {
   char *label;
   uint8_t pidIndex;
-  HoTTv4ControllerValue controllerValue;
+  HoTTv4ControllerValues controllerValue;
 } HoTTv4TextModeData;
 
-static HoTTv4TextModeData settings[] = { {"ROLL :", 0, HoTTv4ControllerValuePID}, 
-                                         {"PITCH:", 1, HoTTv4ControllerValuePID},
-                                         {"YAW  :", 2, HoTTv4ControllerValuePID},
-                                         {"ALT  :", PIDALT, HoTTv4ControllerValuePID},
-                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuePID},
-                                         {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuePID},
-                                         {"MAG  :", PIDMAG, HoTTv4ControllerValueP} }; 
+/**
+ * All 7 lines that are displayed
+ */
+static HoTTv4TextModeData settings[] = { {"ROLL :", 0, HoTTv4ControllerValuesPID}, 
+                                         {"PITCH:", 1, HoTTv4ControllerValuesPID},
+                                         {"YAW  :", 2, HoTTv4ControllerValuesPID},
+                                         {"ALT  :", PIDALT, HoTTv4ControllerValuesPID},
+                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuesPID},
+                                         {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuesPID},
+                                         {"MAG  :", PIDMAG, HoTTv4ControllerValuesP} }; 
  
  /**
  * Sends a char
@@ -359,7 +362,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
   snprintf(label, 8, "%c%s", selectionIndicator, textData->label);  
   crc += hottV4SendWord(label, 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValueP | HoTTv4ControllerValuePID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValuesP | HoTTv4ControllerValuesPID)) {
       crc += hottV4SendFormattedPValue(P8[index], 2 == selectedCol);
   } else {
     crc += hottV4SendWord(" -- ", 0);
@@ -367,7 +370,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
  
   crc += hottV4SendChar(' ', 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValuesPID)) {
     crc += hottV4SendFormattedIValue(I8[index], 3 == selectedCol);
   } else {
     crc += hottV4SendWord(" --- ", 0);
@@ -375,7 +378,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
   
   crc += hottV4SendChar(' ', 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValuesPID)) {
     crc += hottV4SendFormattedDValue(D8[index], 4 == selectedCol);
   } else {
     crc += hottV4SendWord(" - ", 0);
@@ -504,6 +507,27 @@ static uint8_t canSelectNextLine(int8_t row) {
 }
 
 /**
+ * Determines next valid col number in respect of current selected
+ * col and Controller value. 
+ *
+ * @return Number of next valid col.
+ */
+static uint8_t nextCol(int8_t currentCol, int8_t controllerValue) {
+  HoTTv4ControllerValues val = (HoTTv4ControllerValues)controllerValue;
+  
+  switch(val) {
+    case HoTTv4ControllerValuesP:
+      return (currentCol < 2) ? currentCol+1 : 1;
+      break;
+    case HoTTv4ControllerValuesPID:
+      return  (currentCol < 4) ? currentCol+1 : 1;
+      break;
+    default:
+      return 1;
+  }
+}
+
+/**
  * Main method to send PID settings
  */
 void hottV4SendSettings() {
@@ -513,7 +537,7 @@ void hottV4SendSettings() {
   if (!armed) {    
     static int8_t row = 1;
     static int8_t col = 1;
-  
+    
     while(hottV4SerialAvailable() <= 1) {}
   
     uint8_t data = hottV4SerialRead();
@@ -536,7 +560,8 @@ void hottV4SendSettings() {
         hottV4UpdatePIDValueBy(row, col, 1);
       }
     } else if (data == 0xE9) {
-      col = (col < 4) ? col+1 : 1;
+      HoTTv4ControllerValues controllerValue = settings[row].controllerValue;
+      col = nextCol(col, controllerValue);
     }
     
     hottV4SendText(row, col);
