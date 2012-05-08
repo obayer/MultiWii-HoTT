@@ -539,39 +539,41 @@ void hottV4SendSettings() {
     static int8_t col = 1;
     static uint8_t dirty = 0;
     
-    while(hottV4SerialAvailable() <= 1) {}
-  
-    uint8_t data = hottV4SerialRead();
     delay(5);
-      
-    if (data == 0xEB) {
-      if (NO == isInEditingMode(col)) {
-        if (canSelectNextLine(row-1)) {
-          row--;
-        }
-      } else {
-        hottV4UpdatePIDValueBy(row, col, -1);
-        dirty = 1;
-      }
-    } else if (data == 0xED) {
-      if (NO == isInEditingMode(col)) {
-        if (canSelectNextLine(row+1)) {
-          row++; 
-        }
-      } else {
-        hottV4UpdatePIDValueBy(row, col, 1);
-        dirty = 1;
-      }
-    } else if (data == 0xE9) {
-      HoTTv4ControllerValues controllerValue = settings[row].controllerValue;
-      col = nextCol(col, controllerValue);
-      
-      if (dirty > 0) {
-        dirty = 0;
-        writeParams();
-      }
-    }
+    uint8_t data = hottV4SerialRead();
     
+    switch (data) {
+      case 0xEB:
+        if (NO == isInEditingMode(col)) {
+          if (canSelectNextLine(row-1)) {
+            row--;
+          }
+        } else {
+          hottV4UpdatePIDValueBy(row, col, -1);
+          dirty = 1;
+        }
+      break;
+      case 0xED:
+        if (NO == isInEditingMode(col)) {
+          if (canSelectNextLine(row+1)) {
+            row++; 
+          }
+        } else {
+          hottV4UpdatePIDValueBy(row, col, 1);
+          dirty = 1;
+        }
+      break;
+      case 0xE9:
+        HoTTv4ControllerValues controllerValue = settings[row].controllerValue;
+        col = nextCol(col, controllerValue);
+      
+        if (dirty > 0) {
+          dirty = 0;
+          writeParams();
+        }
+      break;
+    }
+      
     hottV4SendText(row, col);
   }
 }
