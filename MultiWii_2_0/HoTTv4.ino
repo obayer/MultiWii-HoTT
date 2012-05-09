@@ -273,10 +273,20 @@ static HoTTv4TextModeData settings[] = { {"ROLL :", 0, HoTTv4ControllerValuesPID
                                          {"GPS  :", PIDGPS, HoTTv4ControllerValuesPID},
                                          {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuesPID},
                                          {"MAG  :", PIDMAG, HoTTv4ControllerValuesP} }; 
+
+uint8_t hottV4Constrain(uint8_t val, uint8_t maxVal) {
+  if ((int8_t)val <= 0) {
+    return 0;
+  } else if (val > maxVal) {
+   return maxVal;
+  } else {
+   return val;
+  } 
+} 
  
- /**
+/**
  * Sends a char
- * @param inverted Char is getting displayed inverted if > 0
+ * @param inverted Char is getting displayed inverted, if > 0
  */
 static uint8_t hottV4SendChar(char c, uint8_t inverted) {
   // Add 128 for inverse display
@@ -290,7 +300,7 @@ static uint8_t hottV4SendChar(char c, uint8_t inverted) {
 
 /**
  * Sends a null terminated string
- * @param inverted Word is getting displayed inverted if > 0
+ * @param inverted Word is getting displayed inverted, if > 0
  *
  * @return crc value
  */
@@ -327,7 +337,7 @@ static uint16_t hottV4SendFormattedPValue(int8_t p, int8_t inverted) {
 static uint16_t hottV4SendFormattedIValue(int8_t i, int8_t inverted) {
   char formatted_I[6];
   snprintf(formatted_I, 6, "0.%03d", i);
-  
+
   return hottV4SendWord(formatted_I, inverted);
 }
 
@@ -476,16 +486,13 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   
   switch (col) {
     case 2:
-      P8[pidIndex] += val;
-      P8[pidIndex] = constrain(P8[pidIndex], 0, 200);
+      P8[pidIndex] =  hottV4Constrain(I8[pidIndex] + val, 200);
       break;
     case 3:
-      I8[pidIndex] += val;
-      I8[pidIndex] = constrain(I8[pidIndex], 0, 250);
+      I8[pidIndex] = hottV4Constrain(I8[pidIndex] + val, 250);
       break;
     case 4:
-      D8[pidIndex] += val;
-      D8[pidIndex] = constrain(D8[pidIndex], 0, 100);
+      D8[pidIndex] =  hottV4Constrain(I8[pidIndex] + val, 100);;
       break;
   } 
 }
