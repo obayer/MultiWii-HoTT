@@ -539,10 +539,15 @@ void hottV4SendSettings() {
     static int8_t col = 1;
     static uint8_t dirty = 0;
     
+    uint8_t sendText = 1;
+    
     delay(5);
     uint8_t data = hottV4SerialRead();
     
     switch (data) {
+      case 0x0F:
+        sendText = 0;
+      break;
       case 0xEB:
         if (NO == isInEditingMode(col)) {
           if (canSelectNextLine(row-1)) {
@@ -574,7 +579,9 @@ void hottV4SendSettings() {
       break;
     }
       
-    hottV4SendText(row, col);
+    if (sendText > 0) {
+      hottV4SendText(row, col);
+    }
   }
 }
 #endif
