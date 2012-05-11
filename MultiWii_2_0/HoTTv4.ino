@@ -252,28 +252,34 @@ void hottV4SendTelemetry() {
 
 // Defines which controller values can be changed for ROLL, PITCH, YAW, etc.
 typedef enum {
-  HoTTv4ControllerValuesP = 1 << 0,
-  HoTTv4ControllerValuesPID = 1 << 1,
-} HoTTv4ControllerValues;
+  HoTTv4ControllerValueP = 1 << 0,
+  HoTTv4ControllerValuePID = 1 << 1,
+} HoTTv4ControllerValue;
 
 // Defines structure of Preamble text, the corresponding PID index, which PID values can be changed.
 typedef struct {
   char *label;
   uint8_t pidIndex;
-  HoTTv4ControllerValues controllerValue;
+  HoTTv4ControllerValue controllerValue;
 } HoTTv4TextModeData;
 
 /**
  * All 7 lines that are displayed
  */
-static HoTTv4TextModeData settings[] = { {"ROLL :", 0, HoTTv4ControllerValuesPID}, 
-                                         {"PITCH:", 1, HoTTv4ControllerValuesPID},
-                                         {"YAW  :", 2, HoTTv4ControllerValuesPID},
-                                         {"ALT  :", PIDALT, HoTTv4ControllerValuesPID},
-                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuesPID},
-                                         {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuesPID},
-                                         {"MAG  :", PIDMAG, HoTTv4ControllerValuesP} }; 
+static HoTTv4TextModeData settings[] = { 
+                                         {"ROLL :", 0, HoTTv4ControllerValuePID}, 
+                                         {"PITCH:", 1, HoTTv4ControllerValuePID},
+                                         {"YAW  :", 2, HoTTv4ControllerValuePID},
+                                         {"ALT  :", PIDALT, HoTTv4ControllerValuePID},
+                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuePID},
+                                         {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuePID},
+                                         {"MAG  :", PIDMAG, HoTTv4ControllerValueP}
+                                       }; 
 
+/**
+ * Constrain given value val between 0 and maxVal
+ * @return Contraint value
+ */
 uint8_t hottV4Constrain(uint8_t val, uint8_t maxVal) {
   if ((int8_t)val <= 0) {
     return 0;
@@ -372,7 +378,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
   snprintf(label, 8, "%c%s", selectionIndicator, textData->label);  
   crc += hottV4SendWord(label, 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValuesP | HoTTv4ControllerValuesPID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValueP | HoTTv4ControllerValuePID)) {
       crc += hottV4SendFormattedPValue(P8[index], 2 == selectedCol);
   } else {
     crc += hottV4SendWord(" -- ", 0);
@@ -380,7 +386,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
  
   crc += hottV4SendChar(' ', 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValuesPID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
     crc += hottV4SendFormattedIValue(I8[index], 3 == selectedCol);
   } else {
     crc += hottV4SendWord(" --- ", 0);
@@ -388,7 +394,7 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
   
   crc += hottV4SendChar(' ', 0);
   
-  if (textData->controllerValue & (HoTTv4ControllerValuesPID)) {
+  if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
     crc += hottV4SendFormattedDValue(D8[index], 4 == selectedCol);
   } else {
     crc += hottV4SendWord(" - ", 0);
@@ -486,13 +492,13 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   
   switch (col) {
     case 2:
-      P8[pidIndex] =  hottV4Constrain(I8[pidIndex] + val, 200);
+      P8[pidIndex] =  hottV4Constrain(P8[pidIndex] + val, 200);
       break;
     case 3:
       I8[pidIndex] = hottV4Constrain(I8[pidIndex] + val, 250);
       break;
     case 4:
-      D8[pidIndex] =  hottV4Constrain(I8[pidIndex] + val, 100);;
+      D8[pidIndex] =  hottV4Constrain(D8[pidIndex] + val, 100);;
       break;
   } 
 }
@@ -501,7 +507,7 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
  * Determines if current selected col can be edited.
  * Returns 1 if given col can be edited, everything else otherwise.
  */
-static uint8_t isInEditingMode(int8_t col) {
+static uint8_t isInEditingMode(uint8_t col) {
   return col > 1;
 }
 
@@ -509,7 +515,7 @@ static uint8_t isInEditingMode(int8_t col) {
  * Determines if given row can be selected as next line.
  * Returns 1 if next line can be selected, everything else otherwise.
  */
-static uint8_t canSelectNextLine(int8_t row) {
+static uint8_t canSelectNextLine(uint8_t row) {
   return (row > 0) && (row < 8);
 }
 
@@ -519,16 +525,14 @@ static uint8_t canSelectNextLine(int8_t row) {
  *
  * @return Number of next valid col.
  */
-static uint8_t nextCol(int8_t currentCol, int8_t controllerValue) {
-  HoTTv4ControllerValues val = (HoTTv4ControllerValues)controllerValue;
-  
+static uint8_t nextCol(uint8_t currentCol, uint8_t controllerValue) {
+  HoTTv4ControllerValue val = (HoTTv4ControllerValue)controllerValue;
+
   switch(val) {
-    case HoTTv4ControllerValuesP:
+    case HoTTv4ControllerValuePID:
+      return (currentCol < 4) ? currentCol+1 : 1;
+    case HoTTv4ControllerValueP:
       return (currentCol < 2) ? currentCol+1 : 1;
-      break;
-    case HoTTv4ControllerValuesPID:
-      return  (currentCol < 4) ? currentCol+1 : 1;
-      break;
     default:
       return 1;
   }
@@ -542,8 +546,8 @@ void hottV4SendSettings() {
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
   if (!armed) {    
-    static int8_t row = 1;
-    static int8_t col = 1;
+    static uint8_t row = 1;
+    static uint8_t col = 1;
     static uint8_t dirty = 0;
     
     uint8_t sendText = 1;
@@ -576,7 +580,7 @@ void hottV4SendSettings() {
         }
       break;
       case 0xE9:
-        HoTTv4ControllerValues controllerValue = settings[row].controllerValue;
+        HoTTv4ControllerValue controllerValue = settings[row - 1].controllerValue;
         col = nextCol(col, controllerValue);
       
         if (dirty > 0) {
