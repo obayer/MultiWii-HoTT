@@ -2,15 +2,27 @@
 
 #if defined(HOTTV4_TELEMETRY)
 
+/** ###### HoTT module specific settings ###### */
+
 #define HOTTV4_GENERAL_AIR_SENSOR 0xD0
 #define HOTTV4_ELECTRICAL_AIR_SENSOR 0xE0
+
+// Update interval in ms for the telemetry data
+#define HOTTV4_UPDATE_INTERVAL 2000 
+
+#if !defined (HOTTV4_TX_DELAY) 
+  #define HOTTV4_TX_DELAY 620
+#endif
+
+/** ###### Common settings ###### */
 
 #define NO 0
 #define YES 1
 
-#if !defined (HOTTV4_TX_DELAY) 
-  #define HOTTV4_TX_DELAY 625
-#endif
+#define HOTTV4_BUTTON_DEC 0xEB
+#define HOTTV4_BUTTON_INC 0xED
+#define HOTTV4_BUTTON_SET 0xE9
+#define HOTTV4_BUTTON_NIL 0x0F
 
 #define ALARM_DRIVE_VOLTAGE 0x10
 
@@ -21,6 +33,9 @@ static uint32_t previousMillis = 0;
  * prints relative hight from ground.
  */
 static int32_t referenceAltitude = 0;
+
+static uint8_t minutes = 0;
+static uint16_t milliseconds = 0;
 
 /**
  * Wrap serial available functions for
@@ -142,8 +157,6 @@ static void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
  * If value is below HOTTV4_VBATLEVEL_3S, telemetry alarm is triggered
  */
 static void hottv4UpdateBattery(uint8_t *data) {
-  // Only for investigating nasty VBAT reporting bug
-  //data[30] = vbat;
   data[30] = vbat; 
   
   // Activate low voltage alarm if above 5.0V
@@ -165,12 +178,34 @@ static void hottv4UpdateAlt(uint8_t *data) {
 }
 
 /**
+ * Updates current flight time by couting the seconds from the moment
+ * the copter was armed.
+ */
+static void hottv4UpdateFlightTime(uint8_t *data, uint16_t timeDiff) {
+  if (armed) {
+    milliseconds += timeDiff;
+    
+    if (milliseconds >= 60000) {
+      milliseconds = 0;
+      minutes += 1;
+    }
+  }
+  
+  data[39] = minutes;
+  // Enough accuracy and faster than divide by 1000
+  data[40] = (milliseconds >> 10) ;
+}
+
+/**
  * Call to initialize HOTTV4
  */
 void hottv4Init() {
   // Set start altitude for relative altitude calculation
   referenceAltitude = EstAlt;
   hottV4EnableReceiverMode();
+  
+  milliseconds = 0;
+  minutes = 0;
   
   #if defined (MEGA)
     /* Enable PullUps on RX3
@@ -194,9 +229,11 @@ void hottv4Setup() {
  * Main method to send telemetry data
  */
 void hottV4SendTelemetry() {
-  if ((millis() - previousMillis) > HOTTV4_UPDATE_INTERVAL) {
+  uint16_t timeDiff = millis() - previousMillis; 
+  
+  if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
     previousMillis = millis();   
-
+    
     // One-Wire protocoll specific "Idle line"
     // delay(5);
         
@@ -236,6 +273,8 @@ void hottV4SendTelemetry() {
     #if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043)
       hottv4UpdateAlt(telemetry_data);
     #endif
+    
+      hottv4UpdateFlightTime(telemetry_data, timeDiff);
     
       // Write out telemetry data as Electric Air Module to serial           
       hottV4SendBinary(telemetry_data, 44);
@@ -548,7 +587,7 @@ void hottV4SendSettings() {
   if (!armed) {    
     static uint8_t row = 1;
     static uint8_t col = 1;
-    static uint8_t dirty = 0;
+    static uint8_t store = 0;
     
     uint8_t sendText = 1;
     
@@ -556,35 +595,35 @@ void hottV4SendSettings() {
     uint8_t data = hottV4SerialRead();
     
     switch (data) {
-      case 0x0F:
+      case HOTTV4_BUTTON_NIL:
         sendText = 0;
       break;
-      case 0xEB:
+      case HOTTV4_BUTTON_DEC:
         if (NO == isInEditingMode(col)) {
           if (canSelectNextLine(row-1)) {
             row--;
           }
         } else {
           hottV4UpdatePIDValueBy(row, col, -1);
-          dirty = 1;
+          store = 1;
         }
       break;
-      case 0xED:
+      case HOTTV4_BUTTON_INC:
         if (NO == isInEditingMode(col)) {
           if (canSelectNextLine(row+1)) {
             row++; 
           }
         } else {
           hottV4UpdatePIDValueBy(row, col, 1);
-          dirty = 1;
+          store = 1;
         }
       break;
-      case 0xE9:
+      case HOTTV4_BUTTON_SET:
         HoTTv4ControllerValue controllerValue = settings[row - 1].controllerValue;
         col = nextCol(col, controllerValue);
       
-        if (dirty > 0) {
-          dirty = 0;
+        if (store > 0) {
+          store = 0;
           writeParams();
         }
       break;
