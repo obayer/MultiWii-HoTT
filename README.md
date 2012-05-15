@@ -20,7 +20,7 @@ What's Needed
 uses 5V TTL, whereas the HoTT receiver needs a 3,3V TTL (LLC is needed).
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
 
-Connection Diagram
+Connection 
 ------------
 * MCU(RxTx) \-\-\- LLC \-\-\- \(Ch05\) Graupner GR\-12
 * HoTT uses one wire to transmit and receive data which means MCU's Rx and Tx line has to be connected together. From RxTx it goes to a LLC to convert
