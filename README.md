@@ -12,6 +12,13 @@ that conforms to the HoTT protocol specifications and is beeing sent to the rece
 Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
 Furthermore, the HoTT textmode capability allows complete customizable text output, this is used to display and change the current [PID settings]. 
 
+Connection Diagram
+------------
+
+   /\- TX \-\\
+MCU          \-\-\- LLC \-\-\-\(Ch05\) Graupner GR\-12
+   \\\- RX \-/
+
 What's Needed
 ------------
 1. HoTT v4 capable RxTx system
