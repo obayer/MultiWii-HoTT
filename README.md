@@ -48,9 +48,10 @@ Limitations
 -----------
 * On MCU platforms that only have one UART, e.g. Arduino ProMini MultiWiiConf Tool cannot be used when telemetry is activated, 
 this means you have to recompile the code and deactivate HoTT telemetry to be able to use MultiWiiConf Tool. 
-* Increases cycle time up to 35ms every time when telemetry data are transmitted. 
+* Increases cycle time up to 35ms every time when telemetry data are transmitted (but it still [flies]). 
 
 [GPLv3]: https://github.com/obayer/MultiWii-HoTT/blob/master/LICENSE.txt
 [Alexinparis]: http://www.multiwii.com/
 [Graupner]: http://www.graupner.de/
 [PID settings]: http://www.youtube.com/watch?v=rItCvYUPo_o
+[flies]: http://www.youtube.com/watch?v=8MEnRZlQoGY
