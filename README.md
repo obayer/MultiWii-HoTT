@@ -12,11 +12,6 @@ that conforms to the HoTT protocol specifications and is beeing sent to the rece
 Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
 Furthermore, the HoTT textmode capability allows complete customizable text output, this is used to display and change the current [PID settings]. 
 
-Connection Diagram
-------------
-
-MCU(RXTX) \-\-\- LLC \-\-\- \(Ch05\) Graupner GR\-12
-
 What's Needed
 ------------
 1. HoTT v4 capable RxTx system
@@ -24,6 +19,13 @@ What's Needed
 3. RxTx signal cable from MCUs UART Pins to receiver input/output channel (on GR-12 it's channel 5). Be advised that the MCU
 uses 5V TTL, whereas the HoTT receiver needs a 3,3V TTL (LLC is needed).
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
+
+Connection Diagram
+------------
+* MCU(RXTX) \-\-\- LLC \-\-\- \(Ch05\) Graupner GR\-12
+* HoTT uses one wire to transmit and receive data which means MCUs RX and TX line have to be connected together. From RXTX it goes to a LLC to convert
+MCU 5V level to 3,3V HoTT level and vice versa. From there the one wire is connected to Graupners receiver on the telemetry port, 
+e.g. channel 05 when using a GR-12.
 
 Configuration
 -------------
