@@ -15,7 +15,7 @@ Furthermore, the HoTT textmode capability allows complete customizable text outp
 Connection Diagram
 ------------
 
-MCU(RXTX\-\-\- LLC \-\-\-\(Ch05\) Graupner GR\-12
+MCU(RXTX) \-\-\- LLC \-\-\- \(Ch05\) Graupner GR\-12
 
 What's Needed
 ------------
