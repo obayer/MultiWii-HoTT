@@ -16,9 +16,10 @@ What's Needed
 ------------
 1. HoTT v4 capable RxTx system
 2. Enabled telemetry downlink channel on the receiver
-3. RxTx signal cable from MCU's UART Pins to the receiver's telemetry port. Be advised that the MCU
-uses 5V TTL, whereas the HoTT receiver needs a 3,3V TTL (LLC is needed).
+3. RxTx signal cable from MCU's UART Pins to the receiver's telemetry port.
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
+
+For detailed information see the [wiki pages](wiki)
 
 Configuration
 -------------
