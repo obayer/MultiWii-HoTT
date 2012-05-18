@@ -20,13 +20,6 @@ What's Needed
 uses 5V TTL, whereas the HoTT receiver needs a 3,3V TTL (LLC is needed).
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
 
-Connection 
-------------
-* MCU(RxTx) \-\-\- LLC \-\-\- \(Ch05\) Graupner GR\-12
-* HoTT uses one wire to transmit and receive data which means MCU's Rx and Tx line has to be connected together. From RxTx it goes to a LLC to convert
-MCU's 5V level to 3,3V HoTT level and vice versa. From LLC the one wire is connected to Graupners receiver on the telemetry port, 
-e.g. channel 05 when using a GR-12.
-
 Configuration
 -------------
 Config parameters can be found in config.h.
@@ -55,7 +48,8 @@ Limitations
 -----------
 * On MCU platforms that only have one UART, e.g. Arduino ProMini MultiWiiConf Tool cannot be used when telemetry is activated, 
 this means you have to recompile the code and deactivate HoTT telemetry to be able to use MultiWiiConf Tool. 
-* Increases cycle time up to 35ms every time when telemetry data are transmitted (but it still [flies]). 
+* Increases cycle time up to 35ms every time when telemetry data are transmitted (but it still [flies]). That's the reason, why
+telemetry data are updated with 0.5Hz.
 
 [GPLv3]: https://github.com/obayer/MultiWii-HoTT/blob/master/LICENSE.txt
 [Alexinparis]: http://www.multiwii.com/
