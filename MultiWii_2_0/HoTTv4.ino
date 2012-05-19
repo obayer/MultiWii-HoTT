@@ -203,10 +203,7 @@ void hottv4Init() {
   // Set start altitude for relative altitude calculation
   referenceAltitude = EstAlt;
   hottV4EnableReceiverMode();
-  
-  milliseconds = 0;
-  minutes = 0;
-  
+    
   #if defined (MEGA)
     /* Enable PullUps on RX3
      * without signal is to weak to be recognized
@@ -223,6 +220,9 @@ void hottv4Init() {
  */
 void hottv4Setup() {
   referenceAltitude = EstAlt;
+  
+  milliseconds = 0;
+  minutes = 0;
 }
 
 /**
