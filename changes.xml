@@ -1,0 +1,25 @@
+/*
+ * changes.xml
+ * MultiWii Meets HoTT
+ *
+ * Created by obayer on 22.05.12.
+ */
+<document>
+  <properties>
+    <title>
+      Changes document for the "MultiWii Meets HoTT" Extension.
+    </title>
+  </properties>
+  <body>
+    <release version="sid" date="" description="">
+        <action type="add">Flight time since copter has been armed via General Electric Air Module</action>
+    </release>
+    
+    <release version="1.0" date="11.05.2012" description="Initial release">
+        <action type="add">LiPo Volatage monitoring via General Electric Air Module</action>
+        <action type="add">Relative height over ground monitoring via General Electric Air Module</action>
+        <action type="add">Report and Change PID settings for Roll, Pitch, Yaw, Alt, GPS, Level, and Mag via Textmode of General Electric Air Module</action>
+    </release>
+  </body>
+</document>
+
