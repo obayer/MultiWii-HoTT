@@ -186,7 +186,7 @@ static void hottv4UpdateFlightTime(uint8_t *data, uint16_t timeDiff) {
     milliseconds += timeDiff;
     
     if (milliseconds >= 60000) {
-      milliseconds = 0;
+      milliseconds -= 60000;
       minutes += 1;
     }
   }
