@@ -9,7 +9,7 @@
 
 /* Set the minimum throttle command sent to the ESC (Electronic Speed Controller)
    This is the minimum value that allow motors to run at a idle speed  */
-#define MINTHROTTLE 1085 // for HK ESCs 18A
+#define MINTHROTTLE 1050 // for HK ESCs 18A
 //#define MINTHROTTLE 1300 // for Turnigy Plush ESCs 10A
 //#define MINTHROTTLE 1120 // for Super Simple ESCs 10A
 //#define MINTHROTTLE 1220
@@ -186,7 +186,7 @@
    balancing options ran out. Uncomment only one option!
    IMPORTANT! Change low pass filter setting changes PID behaviour, so retune your PID's after changing LPF.*/
 //#define MPU6050_LPF_256HZ     // This is the default setting, no need to uncomment, just for reference
-//#define MPU6050_LPF_188HZ
+#define MPU6050_LPF_188HZ
 //#define MPU6050_LPF_98HZ
 //#define MPU6050_LPF_42HZ
 //#define MPU6050_LPF_20HZ
@@ -288,7 +288,7 @@
 
 /* this is the value for the ESCs when they are not armed
    in some cases, this value must be lowered down to 900 for some specific ESCs */
-#define MINCOMMAND 950
+#define MINCOMMAND 930
 
 /* this is the maximum value for the ESCs at full power
    this value can be increased up to 2000 */
@@ -485,7 +485,7 @@
    with R1=33k and R2=51k
    vbat = [0;1023]*16/VBATSCALE */
 #define VBAT              // comment this line to suppress the vbat code
-#define VBATSCALE     130 // change this value if readed Battery voltage is different than real voltage
+#define VBATSCALE     129 // change this value if readed Battery voltage is different than real voltage
 #define VBATLEVEL1_3S 107 // 10,7V
 #define VBATLEVEL2_3S 103 // 10,3V
 #define VBATLEVEL3_3S 99  // 9.9V
