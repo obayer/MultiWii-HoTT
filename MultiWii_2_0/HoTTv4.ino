@@ -24,7 +24,49 @@
 #define HOTTV4_BUTTON_SET 0xE9
 #define HOTTV4_BUTTON_NIL 0x0F
 
-#define ALARM_DRIVE_VOLTAGE 0x10
+typedef enum {
+  HoTTv4NotificationErrorCalibration     = 0x01,
+  HoTTv4NotificationErrorReceiver        = 0x02,
+  HoTTv4NotificationErrorDataBus         = 0x03,
+  HoTTv4NotificationErrorNavigation      = 0x04,
+  HoTTv4NotificationErrorError           = 0x05,
+  HoTTv4NotificationErrorCompass         = 0x06,
+  HoTTv4NotificationErrorSensor          = 0x07,
+  HoTTv4NotificationErrorGPS             = 0x08,
+  HoTTv4NotificationErrorMotor           = 0x09,
+  
+  HoTTv4NotificationMaxTemperature       = 0x0A,
+  HoTTv4NotificationAltitudeReached      = 0x0B,
+  HoTTv4NotificationWaypointReached      = 0x0C,
+  HoTTv4NotificationNextWaypoint         = 0x0D,
+  HoTTv4NotificationLanding              = 0x0E,
+  HoTTv4NotificationGPSFix               = 0x0F,
+  HoTTv4NotificationUndervoltage         = 0x10,
+  HoTTv4NotificationGPSHold              = 0x11,
+  HoTTv4NotificationGPSHome              = 0x12,
+  HoTTv4NotificationGPSOff               = 0x13,
+  HoTTv4NotificationBeep                 = 0x14,
+  HoTTv4NotificationMicrocopter          = 0x15,
+  HoTTv4NotificationCapacity             = 0x16,
+  HoTTv4NotificationCareFreeOff          = 0x17,
+  HoTTv4NotificationCalibrating          = 0x18,
+  HoTTv4NotificationMaxRange             = 0x19,
+  HoTTv4NotificationMaxAltitude          = 0x1A,
+  
+  HoTTv4Notification20Meter              = 0x25,
+  HoTTv4NotificationMicrocopterOff       = 0x26,
+  HoTTv4NotificationAltitudeOn           = 0x27,
+  HoTTv4NotificationAltitudeOff          = 0x28,
+  HoTTv4Notification100Meter             = 0x29,
+  HoTTv4NotificationCareFreeOn           = 0x2E,
+  HoTTv4NotificationDown                 = 0x2F,
+  HoTTv4NotificationUp                   = 0x30,
+  HoTTv4NotificationHold                 = 0x31,
+  HoTTv4NotificationGPSOn                = 0x32,
+  HoTTv4NotificationFollowing            = 0x33,
+  HoTTv4NotificationStarting             = 0x34,
+  HoTTv4NotificationReceiver             = 0x35,
+} HoTTv4Notification;
 
 // Last time telemetry data were updated
 static uint32_t previousMillis = 0;
@@ -135,7 +177,7 @@ static void hottV4SendBinary(uint8_t *data, uint8_t length) {
   uint8_t crcVal = crc & 0xFF;
   hottV4SerialWrite(crcVal);
 
-  /* Wait until Data Register and TX REgister is empty */
+  /* Wait until Data Register and TX Register is empty */
   hottV4LoopUntilRegistersReady();
   
   /* Enables RX / Disables TX */
@@ -143,10 +185,12 @@ static void hottV4SendBinary(uint8_t *data, uint8_t length) {
 } 
 
 /**
- * Triggers an alarm signal
+ * Triggers a notification signal
+ * Actually notification is of type HoTTv4Notification, but Wiring lacks in usage
+ * of enums, structs, etc. due to their prototyping s*****.
  */
-static void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
-  data[2] = alarm;
+static void hottV4TriggerNotification(uint8_t *data, uint8_t notification) {
+  data[2] = notification;
 }
 
 /**
@@ -158,10 +202,12 @@ static void hottV4TriggerAlarm(uint8_t *data, uint8_t alarm) {
  */
 static void hottv4UpdateBattery(uint8_t *data) {
   data[30] = vbat; 
-  
+
   // Activate low voltage alarm if above 5.0V
   if (vbat < HOTTV4_VBATLEVEL_3S && vbat > 50) {
-    hottV4TriggerAlarm(data, ALARM_DRIVE_VOLTAGE);
+    hottV4TriggerNotification(data, HoTTv4NotificationUndervoltage);
+  } else if (vbat > 126) {
+    hottV4TriggerNotification(data, HoTTv4NotificationErrorError);
   }
 }
 
