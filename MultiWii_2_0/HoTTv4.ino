@@ -768,7 +768,7 @@ static void hottV4SendSettings() {
 void hottV4Hook(uint8_t serialData) {  
   switch (serialData) {
     case HOTTV4_GPS_MODULE:
-      //hottV4SendGPSTelemetry();
+      hottV4SendGPSTelemetry();
     break;
     
     case HOTTV4_ELECTRICAL_AIR_MODULE: {
@@ -776,10 +776,10 @@ void hottV4Hook(uint8_t serialData) {
       
       uint16_t timeDiff = millis() - previousEAMUpdate;
 
-      if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
+      //if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
         previousEAMUpdate += timeDiff;
         hottV4SendEAMTelemetry(timeDiff);
-      }
+      //}
     }
     break;
       
