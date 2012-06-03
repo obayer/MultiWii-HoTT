@@ -204,9 +204,9 @@ static void hottv4UpdateBattery(uint8_t *data) {
   data[30] = vbat; 
 
   // Activate low voltage alarm if above 5.0V
-  if (vbat < HOTTV4_VBATLEVEL_3S && vbat > 50) {
+  if (vbat < HOTTV4_VOLTAGE_WARNING && vbat > 50) {
     hottV4TriggerNotification(data, HoTTv4NotificationUndervoltage);
-  } else if (vbat > 126) {
+  } else if (vbat > HOTTV4_VOLTAGE_MAX) {
     hottV4TriggerNotification(data, HoTTv4NotificationErrorError);
   }
 }
