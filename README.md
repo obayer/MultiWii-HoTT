@@ -5,6 +5,11 @@ This projects contains an extension for the current MultiWii 2.0 software to sen
 and report/change current settings of the flight system, if HoTT v4 capable RxTx systems from [Graupner] are used.
 Licensed under [GPLv3].
 
+Caution
+------------
+Please don't use the extension provided directly from master branch as it is software in development, which could mean that
+it has never been tested out in the field. Tags are tested on a real QuadX out in the field that they are ready to fly.
+
 How It Works
 ------------
 Sensor data are continously gathered by the flight control software. Every 2 seconds selected sensor data (e.g. LiPo voltage) are packed into a format
