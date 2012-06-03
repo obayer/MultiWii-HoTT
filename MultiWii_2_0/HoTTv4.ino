@@ -239,7 +239,7 @@ static void hottv4UpdateBattery(uint8_t *data) {
   data[30] = vbat; 
 
   // Activate low voltage alarm if above 5.0V
-  if (vbat < HOTTV4_VOLTAGE_WARNING && vbat > 50) {
+  if (vbat <= HOTTV4_VOLTAGE_WARNING && vbat > 50) {
     hottV4TriggerNotification(data, HoTTv4NotificationUndervoltage);
   } else if (vbat > HOTTV4_VOLTAGE_MAX) {
     hottV4TriggerNotification(data, HoTTv4NotificationErrorError);
@@ -413,9 +413,6 @@ static void hottV4SendGPSTelemetry() {
  *                HoTTv4 Text Mode                                       *
  * ##################################################################### */
 
-// Number of Rows without Header that can be displayed
-#define ROWS 7
-
 // Defines which controller values can be changed for ROLL, PITCH, YAW, etc.
 typedef enum {
   HoTTv4ControllerValueP = 1 << 0,
@@ -428,6 +425,8 @@ typedef struct {
   uint8_t pidIndex;
   HoTTv4ControllerValue controllerValue;
 } HoTTv4TextModeData;
+
+#define HOTTV4_SETTING_LINES 7
 
 /**
  * All 7 lines that are displayed
@@ -596,11 +595,11 @@ static uint16_t hottV4SendTextline(char *line) {
  *
  * @return crc value
  */
-static uint16_t hottV4SendFormattedTextblock(int8_t selectedRow, int8_t selectedCol) {
+static uint16_t hottV4SendFormattedTextblock(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
   crc += hottV4SendTextline(" MultiWii MEETS HoTT");
   
-  for (int8_t index = 0; index < ROWS; index++) {
+  for (int8_t index = lineOffset; index < (lineOffset + 7); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;    
     crc += hottV4SendFormattedTextline(&settings[index], col);
   }
@@ -635,7 +634,7 @@ static void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
 
   crc += hottV4SendTextModeHeader();
-  crc += hottV4SendFormattedTextblock(selectedRow, selectedCol);
+  crc += hottV4SendFormattedTextblock(0, selectedRow, selectedCol);
   
   hottV4SerialWrite(0x7D);
   crc += (0x7D);
@@ -681,8 +680,8 @@ static uint8_t isInEditingMode(uint8_t col) {
  * Determines if given row can be selected as next line.
  * Returns 1 if next line can be selected, everything else otherwise.
  */
-static uint8_t canSelectNextLine(uint8_t row) {
-  return (row > 0) && (row < 8);
+static uint8_t canSelectLine(uint8_t row) {
+  return (row > 0) && (row <= HOTTV4_SETTING_LINES);
 }
 
 /**
@@ -727,7 +726,7 @@ static void hottV4SendSettings() {
       break;
       case HOTTV4_BUTTON_DEC:
         if (NO == isInEditingMode(col)) {
-          if (canSelectNextLine(row-1)) {
+          if (canSelectLine(row-1)) {
             row--;
           }
         } else {
@@ -737,7 +736,7 @@ static void hottV4SendSettings() {
       break;
       case HOTTV4_BUTTON_INC:
         if (NO == isInEditingMode(col)) {
-          if (canSelectNextLine(row+1)) {
+          if (canSelectLine(row+1)) {
             row++; 
           }
         } else {
@@ -765,7 +764,7 @@ static void hottV4SendSettings() {
 /**
  * Main entry point for HoTTv4 telemetry
  */
-void hottV4Hook(uint8_t serialData) {  
+uint8_t hottV4Hook(uint8_t serialData) {  
   switch (serialData) {
     case HOTTV4_GPS_MODULE:
       hottV4SendGPSTelemetry();
