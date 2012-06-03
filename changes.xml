@@ -12,6 +12,9 @@
   </properties>
   <body>
     <release version="sid" date="" description="">
+    </release>
+    
+    <release version="1.1" date="03.06.2012" description="Flight time and macros for battery monitoring">
         <action type="update">Macro name for voltage warning level</action>
         <action type="add">Macro to define max. voltage of used battery to detect malfunctions of battery monitoring</action>
         <action type="add">Flight time since copter has been armed via General Electric Air Module</action>
