@@ -2,13 +2,27 @@
 
 #if defined(HOTTV4_TELEMETRY)
 
+#if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043) || defined (GPS)
+  #define HOTTV4ALTITUDE
+#endif
+
+#if defined(FREEIMUv043) || defined (GPS)
+  #define HOTTV4DIR
+#endif
+
 /** ###### HoTT module specific settings ###### */
 
-#define HOTTV4_GENERAL_AIR_SENSOR 0xD0
-#define HOTTV4_ELECTRICAL_AIR_SENSOR 0xE0
+#define HOTTV4_GENERAL_AIR_SENSOR_ID 0xD0
+
+#define HOTTV4_ELECTRICAL_AIR_SENSOR_ID 0xE0 // Electric Air Sensor ID
+#define HOTTV4_ELECTRICAL_AIR_MODULE 0x8E // Electric Air Module ID
+#define HOTTV4_ELECTRICAL_AIR_TEXTMODE 0x7F // Electrical Air Module Text Mode ID
+
+#define HOTTV4_GPS_SENSOR_ID 0xA0 // GPS Sensor ID
+#define HOTTV4_GPS_MODULE  0x8A  // GPS Module ID
 
 // Update interval in ms for the telemetry data
-#define HOTTV4_UPDATE_INTERVAL 2000 
+#define HOTTV4_UPDATE_INTERVAL 2000
 
 #if !defined (HOTTV4_TX_DELAY) 
   #define HOTTV4_TX_DELAY 620
@@ -68,16 +82,21 @@ typedef enum {
   HoTTv4NotificationReceiver             = 0x35,
 } HoTTv4Notification;
 
-// Last time telemetry data were updated
-static uint32_t previousMillis = 0;
-
-/** Stores current altitude level, so telemetry altitude
+/** 
+ * Stores current altitude level, so telemetry altitude
  * prints relative hight from ground.
  */
 static int32_t referenceAltitude = 0;
 
+/** Stores heading when copter was armed to calculate relative heading to home position */
+static int32_t referenceHeading = 0;
+
 static uint8_t minutes = 0;
 static uint16_t milliseconds = 0;
+
+/* ##################################################################### *
+ *                HoTTv4 Common Serial                                   *
+ * ##################################################################### */
 
 /**
  * Wrap serial available functions for
@@ -184,6 +203,22 @@ static void hottV4SendBinary(uint8_t *data, uint8_t length) {
   hottV4EnableReceiverMode();
 } 
 
+/* ##################################################################### *
+ *                HoTTv4 Module specific Update functions                *
+ * ##################################################################### */
+
+/**
+ * Updates current direction related on compass information.
+ * 1 = 2 degree
+ */
+static void hottV4UpdateDirection(uint8_t *data) {  
+  if (heading < 0) {
+    data[6] = (heading + 360) >> 1;
+  } else {
+    data[6] = heading >> 1;
+  }
+}
+
 /**
  * Triggers a notification signal
  * Actually notification is of type HoTTv4Notification, but Wiring lacks in usage
@@ -212,19 +247,21 @@ static void hottv4UpdateBattery(uint8_t *data) {
 }
 
 /**
- * Updates the Altitude value using EstAlt (cm).
+ * Current relative altitude based on baro or GPS values. 
  * Result is displayed in meter.
+ *
+ * @param data Pointer to telemetry data frame
+ * @param lowByteIndex Index for the low byte that represents the altitude in telemetry data frame
  */
-static void hottv4UpdateAlt(uint8_t *data) {  
+static void hottv4UpdateAlt(uint8_t *data, uint8_t lowByteIndex) {
   int32_t alt = ((EstAlt - referenceAltitude) / 100) + 500;
   
-  // Sets altitude high and low byte
-  data[26] = alt & 0xFF;
-  data[27] = (alt >> 8) & 0xFF;
+  data[lowByteIndex] = alt;
+  data[lowByteIndex + 1] = (alt >> 8) & 0xFF;  
 }
 
 /**
- * Updates current flight time by couting the seconds from the moment
+ * Updates current flight time by counting the seconds from the moment
  * the copter was armed.
  */
 static void hottv4UpdateFlightTime(uint8_t *data, uint16_t timeDiff) {
@@ -271,61 +308,105 @@ void hottv4Setup() {
   minutes = 0;
 }
 
+/* ##################################################################### *
+ *                HoTTv4 EAM Module                                      *
+ * ##################################################################### */
+
 /**
- * Main method to send telemetry data
+ * Main method to send EAM telemetry data
  */
-void hottV4SendTelemetry() {
-  uint16_t timeDiff = millis() - previousMillis; 
+static void hottV4SendEAMTelemetry(uint16_t timeDiff) {  
+  uint8_t telemetry_data[] = { 
+              0x7C,
+              HOTTV4_ELECTRICAL_AIR_MODULE, 
+              0x00, /* Alarm */
+              HOTTV4_ELECTRICAL_AIR_SENSOR_ID,
+              0x00, 0x00, /* Alarm Value 1 and 2 */
+              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Low Voltage Cell 1-7 in 2mV steps */
+              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* High Voltage Cell 1-7 in 2mV steps */
+              0x00, 0x00, /* Battetry 1 LSB/MSB in 100mv steps, 50 == 5V */
+              0x00, 0x00, /* Battetry 2 LSB/MSB in 100mv steps, 50 == 5V */
+              0x14, /* Temp 1, Offset of 20. 20 == 0C */ 
+              0x14, /* Temp 2, Offset of 20. 20 == 0C */
+              0xF4, 0x01, /* Height. Offset -500. 500 == 0 */
+              0x00, 0x00, /* Current LSB, MSB 1 = 0.1A */
+              0x00, 0x00, /* Drive Voltage */
+              0x00, 0x00,  /* mAh */
+              0x48, 0x00, /* m2s */ 
+              0x78, /* m3s */
+              0x00, 0x00, /* RPM. 10er steps, 300 == 3000rpm */
+              0x00, /* Electric minutes */
+              0x00, /* Electric seconds */
+              0x00, /* Speed */
+              0x00, /* Version Number */
+              0x7D, /* End sign */
+              0x00 /* Checksum */
+            };
   
-  if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
-    previousMillis = millis();   
-    
-    // One-Wire protocoll specific "Idle line"
-    // delay(5);
-        
-    // Check if line is quite to avoid collisions
-    if (hottV4SerialAvailable() == 0) {
-      uint8_t telemetry_data[] = { 
-                  0x7C,
-                  HOTTV4_ELECTRICAL_AIR_MODULE, 
-                  0x00, /* Alarm */
-                  HOTTV4_ELECTRICAL_AIR_SENSOR,
-                  0x00, 0x00, /* Alarm Value 1 and 2 */
-                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Low Voltage Cell 1-7 in 2mV steps */
-                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* High Voltage Cell 1-7 in 2mV steps */
-                  0x00, 0x00, /* Battetry 1 LSB/MSB in 100mv steps, 50 == 5V */
-                  0x00, 0x00, /* Battetry 2 LSB/MSB in 100mv steps, 50 == 5V */
-                  0x14, /* Temp 1, Offset of 20. 20 == 0C */ 
-                  0x14, /* Temp 2, Offset of 20. 20 == 0C */
-                  0xF4, 0x01, /* Height. Offset -500. 500 == 0 */
-                  0x00, 0x00, /* Current LSB, MSB 1 = 0.1A */
-                  0x00, 0x00, /* Drive Voltage */
-                  0x00, 0x00,  /* mAh */
-                  0x48, 0x00, /* m2s */ 
-                  0x78, /* m3s */
-                  0x00, 0x00, /* RPM. 10er steps, 300 == 3000rpm */
-                  0x00, /* Electric minutes */
-                  0x00, /* Electric seconds */
-                  0x00, /* Speed */
-                  0x00, /* Version Number */
-                  0x7D, /* End sign */
-                  0x00 /* Checksum */
-                };
-      
-    #if defined(VBAT)
-      hottv4UpdateBattery(telemetry_data);
-    #endif
-    
-    #if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043)
-      hottv4UpdateAlt(telemetry_data);
-    #endif
-    
-      hottv4UpdateFlightTime(telemetry_data, timeDiff);
-    
-      // Write out telemetry data as Electric Air Module to serial           
-      hottV4SendBinary(telemetry_data, 44);
-    }
-  }
+  #if defined(VBAT)
+    hottv4UpdateBattery(telemetry_data);
+  #endif
+  
+  #if defined(HOTTV4ALTITUDE)
+    hottv4UpdateAlt(telemetry_data, 26);
+  #endif
+
+  hottv4UpdateFlightTime(telemetry_data, timeDiff);
+
+  // Write out telemetry data as Electric Air Module to serial           
+  hottV4SendBinary(telemetry_data, 44);
+}
+
+/* ##################################################################### *
+ *                HoTTv4 GPS Module                                      *
+ * ##################################################################### */
+
+/**
+ * Main method to send GPS telemetry data
+ */
+static void hottV4SendGPSTelemetry() {
+  uint8_t telemetry_data[] = { 
+              0x7C,
+              HOTTV4_GPS_MODULE, 
+              0x00, /* Alarm */
+              HOTTV4_GPS_SENSOR_ID,
+              0x00, 0x00, /* Alarm Value 1 and 2 */
+              0x00, /* Flight direction */ 
+              0x00, 0x00, /* Velocity */ 
+              0x00, 0x00, 0x00, 0x00, 0x00, /*  */
+              0x00, 0x00, 0x00, 0x00, 0x00, /* */
+              0x00, 0x00, /* Distance */
+              0xF4, 0x01, /* Altitude, 500 = 0m */
+              0x78, 0x00, /* m/s, 1 = 0.01m/s */ 
+              0x78, /* m/3s, 120 = 0 */
+              0x00, /* Number of satelites */ 
+              0x00, /* GPS fix character */
+              0x00, /* Home direction */
+              0x00, /* angle x-direction */
+              0x00, /* angle y-direction */
+              0x00, /* angle z-direction */
+              0x00, 0x00,  /* gyro x */
+              0x00, 0x00, /* gyro y */ 
+              0x00, 0x00, /* gyro z */
+              0x00, /* Vibrations */
+              0x00, /* ASCII Free Character 4 */
+              0x00, /* ASCII Free Character 5 */
+              0x00, /* ASCII Free Character 6 */
+              0x00, /* Version Number */
+              0x7D, /* End sign */
+              0x00 /* Checksum */
+            };
+          
+  #if defined(HOTTV4ALTITUDE)
+    hottv4UpdateAlt(telemetry_data, 21);
+  #endif
+   
+  #if defined(HOTTV4DIR) 
+    hottV4UpdateDirection(telemetry_data);
+  #endif
+  
+  // Write out telemetry data as GPS Module to serial           
+  hottV4SendBinary(telemetry_data, 44);
 }
 
 /* ##################################################################### *
@@ -365,7 +446,7 @@ static HoTTv4TextModeData settings[] = {
  * Constrain given value val between 0 and maxVal
  * @return Contraint value
  */
-uint8_t hottV4Constrain(uint8_t val, uint8_t maxVal) {
+static uint8_t hottV4Constrain(uint8_t val, uint8_t maxVal) {
   if ((int8_t)val <= 0) {
     return 0;
   } else if (val > maxVal) {
@@ -626,7 +707,7 @@ static uint8_t nextCol(uint8_t currentCol, uint8_t controllerValue) {
 /**
  * Main method to send PID settings
  */
-void hottV4SendSettings() {
+static void hottV4SendSettings() {
   // Saftey measure because it takes way to long to send data in text mode
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
@@ -680,4 +761,32 @@ void hottV4SendSettings() {
     }
   }
 }
+
+/**
+ * Main entry point for HoTTv4 telemetry
+ */
+void hottV4Hook(uint8_t serialData) {  
+  switch (serialData) {
+    case HOTTV4_GPS_MODULE:
+      //hottV4SendGPSTelemetry();
+    break;
+    
+    case HOTTV4_ELECTRICAL_AIR_MODULE: {
+      static uint32_t previousEAMUpdate = 0;
+      
+      uint16_t timeDiff = millis() - previousEAMUpdate;
+
+      if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
+        previousEAMUpdate += timeDiff;
+        hottV4SendEAMTelemetry(timeDiff);
+      }
+    }
+    break;
+      
+    case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
+      hottV4SendSettings();
+    break;
+  }
+}
+
 #endif

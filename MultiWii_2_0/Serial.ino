@@ -22,15 +22,12 @@ void serialCom() {
   #endif
   
   if (SerialAvailable(0)) {
-    switch (sr = SerialRead(0)) {
     #if defined(HOTTV4_TELEMETRY)
-    case HOTTV4_ELECTRICAL_AIR_MODULE:
-      hottV4SendTelemetry();
-    break;
-    case HOTTV4_TEXTMODE:
-      hottV4SendSettings();
-    break;
+      sr = SerialRead(0);
+      hottV4Hook(sr);
     #endif
+    
+    switch (sr) {
     #ifdef BTSERIAL
     case 'K': //receive RC data from Bluetooth Serial adapter as a remote
       rcData[THROTTLE] = (SerialRead(0) * 4) + 1000;

@@ -3,8 +3,6 @@
 /*************************************************************************************************/
 
 #define HOTTV4_TELEMETRY // Define for use of Graupner HoTT v4 telemetry usage
-#define HOTTV4_ELECTRICAL_AIR_MODULE 0x8E // Electric Air Module ID
-#define HOTTV4_TEXTMODE 0x7F // Electrical Air Module Text Mode ID
 #define HOTTV4_VOLTAGE_MAX 126 // Max. voltage of used batttery, e.g. LiPo 3S = 12,6V
 #define HOTTV4_VOLTAGE_WARNING 103 // Battery level when alarm is triggered (10,3V)
 
@@ -187,8 +185,8 @@
    balancing options ran out. Uncomment only one option!
    IMPORTANT! Change low pass filter setting changes PID behaviour, so retune your PID's after changing LPF.*/
 //#define MPU6050_LPF_256HZ     // This is the default setting, no need to uncomment, just for reference
-#define MPU6050_LPF_188HZ
-//#define MPU6050_LPF_98HZ
+//#define MPU6050_LPF_188HZ
+#define MPU6050_LPF_98HZ
 //#define MPU6050_LPF_42HZ
 //#define MPU6050_LPF_20HZ
 //#define MPU6050_LPF_10HZ      // Use this only in extreme cases, rather change motors and/or props
