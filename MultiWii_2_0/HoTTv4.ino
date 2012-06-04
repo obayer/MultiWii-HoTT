@@ -226,6 +226,10 @@ static void hottV4UpdateDirection(uint8_t *data) {
  */
 static void hottV4TriggerNotification(uint8_t *data, uint8_t notification) {
   data[2] = notification;
+  
+  if (notification == HoTTv4NotificationUndervoltage) {
+    data[4] = 0x80; // Inverts MikroKopter Telemetry Display for Voltage
+  }
 }
 
 /**
@@ -239,7 +243,7 @@ static void hottv4UpdateBattery(uint8_t *data) {
   data[30] = vbat; 
 
   // Activate low voltage alarm if above 5.0V
-  if (vbat <= HOTTV4_VOLTAGE_WARNING && vbat > 50) {
+  if (vbat <= HOTTV4_VOLTAGE_WARNING && vbat > 30) {
     hottV4TriggerNotification(data, HoTTv4NotificationUndervoltage);
   } else if (vbat > HOTTV4_VOLTAGE_MAX) {
     hottV4TriggerNotification(data, HoTTv4NotificationErrorError);
