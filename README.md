@@ -15,7 +15,8 @@ How It Works
 Sensor data are continously gathered by the flight control software. Every 2 seconds selected sensor data (e.g. LiPo voltage) are packed into a format
 that conforms to the HoTT protocol specifications and is beeing sent to the receiver via MCUs serial interface (RX0TX0 on non Mega2560 platforms, RX3TX3 on Mega2560).
 Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
-Furthermore, the HoTT textmode capability allows complete customizable text output, this is used to display and change the current [PID settings]. 
+Furthermore, the HoTT textmode capability allows complete customizable text output, this is used to display and change the current [PID settings], as well as debug data
+and activated sensors. 
 
 What's Needed
 ------------
