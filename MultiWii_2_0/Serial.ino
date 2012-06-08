@@ -22,9 +22,10 @@ void serialCom() {
   #endif
   
   if (SerialAvailable(0)) {
-    #if defined(HOTTV4_TELEMETRY)
-      sr = SerialRead(0);
-      hottV4Hook(sr);
+    sr = SerialRead(0);
+
+    #if defined(HOTTV4_TELEMETRY) && !defined(MEGA)
+      sr = hottV4Hook(sr);
     #endif
     
     switch (sr) {

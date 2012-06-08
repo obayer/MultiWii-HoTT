@@ -37,6 +37,9 @@
 #define HOTTV4_BUTTON_INC 0xED
 #define HOTTV4_BUTTON_SET 0xE9
 #define HOTTV4_BUTTON_NIL 0x0F
+#define HOTTV4_BUTTON_NEXT 0xEE
+#define HOTTV4_BUTTON_PREV 0xE7
+
 
 typedef enum {
   HoTTv4NotificationErrorCalibration     = 0x01,
@@ -474,7 +477,7 @@ static uint8_t hottV4SendChar(char c, uint8_t inverted) {
 }
 
 /**
- * Sends a null terminated string
+ * Sends a null terminated string, but max. 21 chars
  * @param inverted Word is getting displayed inverted, if > 0
  *
  * @return crc value
@@ -482,11 +485,31 @@ static uint8_t hottV4SendChar(char c, uint8_t inverted) {
 static uint16_t hottV4SendWord(char *w, uint8_t inverted) {
   uint16_t crc = 0;
   
-  for (uint8_t index = 0; ; index++) {
+  for (uint8_t index = 0; index < 21 ; index++) {
     if (w[index] == 0x0) {
       break;
     } else { 
       crc += hottV4SendChar(w[index], inverted);  
+    }
+  }
+  
+  return crc;
+}
+
+/**
+ * Sends one line of text max. 21 chars. If less than 21 chars, rest
+ * is filled with whitespace chars.
+ */
+static uint16_t hottV4SendTextline(char *line) {
+  uint16_t crc = 0;
+  uint8_t useZeroBytes = 0;
+  
+  for (uint8_t index = 0; index < 21; index++) {
+    if (line[index] == 0x0 || useZeroBytes) {
+      useZeroBytes = 1;
+      crc += hottV4SendChar(0x20, 0);
+    } else {      
+      crc += hottV4SendChar(line[index], 0);
     }
   }
   
@@ -529,12 +552,12 @@ static uint16_t hottV4SendFormattedDValue(int8_t d, int8_t inverted) {
 
 /**
  * Sends one text line consiting of 21 digits.
- * @param textData Cotains all data needed to display PID values
+ * @param textData Contains all data needed to display PID values
  * @param selectedCol If > 0 text, p, i, or d column will be selected
  *
  * @return crc value
  */
-static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
+static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
   uint16_t crc = 0;
   
   // void * to fix this stupid arduino prototyping f***  http://www.arduino.cc/cgi-bin/yabb2/YaBB.pl?num=1195036223
@@ -573,50 +596,87 @@ static uint16_t hottV4SendFormattedTextline(void* data, int8_t selectedCol) {
 }
 
 /**
- * Sends one line of text max. 21 chars. If less than 21 chars, rest
- * is filled with whitespace chars.
- */
-static uint16_t hottV4SendTextline(char *line) {
-  uint16_t crc = 0;
-  uint8_t useZeroBytes = 0;
-  
-  for (uint8_t index = 0; index < 21; index++) {
-    if (line[index] == 0x0 || useZeroBytes) {
-      useZeroBytes = 1;
-      crc += hottV4SendChar(0x20, 0);
-    } else {      
-      crc += hottV4SendChar(line[index], 0);
-    }
-  }
-  
-  return crc;
-}
-
-/**
  * Sends the complete 8x21 digit text block
  * @param selectedRow Which row will display the selection indicator
  * @param selectedCol Which col of the selected row will bei selected
  *
  * @return crc value
  */
-static uint16_t hottV4SendFormattedTextblock(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
+static uint16_t hottV4SendPIDSettings(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
-  crc += hottV4SendTextline(" MultiWii MEETS HoTT");
+  crc += hottV4SendTextline(" MultiWii - PID     >");
   
   for (int8_t index = lineOffset; index < (lineOffset + 7); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;    
-    crc += hottV4SendFormattedTextline(&settings[index], col);
+    crc += hottV4SendFormattedPIDTextline(&settings[index], col);
   }
    
   return crc; 
 }
 
 /**
- * Send Header for Text Mode
+ * Sends a complete 8x21 digit text block containg several debug information.
+ * @return crc value
  */
-static uint16_t hottV4SendTextModeHeader() {
+static uint16_t hottV4SendDebugInfos(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
   
+  crc += hottV4SendTextline(" MultiWii - DEBUG  < ");
+  
+  char formattedLine[22];
+  
+  // GYRO
+  snprintf(formattedLine, 22, " GYRO: %+04d %+04d %+04d", gyroData[0], gyroData[1], gyroData[2]);
+  crc += hottV4SendTextline(formattedLine);
+  
+  // ACC
+  crc += hottV4SendWord(" ACC ", rcOptions[BOXACC]);
+  snprintf(formattedLine, 17, ": %+04d %+04d %+04d", accSmooth[0], accSmooth[1], accSmooth[2]);
+  crc += hottV4SendWord(formattedLine, 0);
+  
+  // MAG
+  crc += hottV4SendWord(" MAG ", rcOptions[BOXMAG]);
+  snprintf(formattedLine, 17, ": %+04d %+04d %+04d", magADC[0], magADC[1], magADC[2]);
+  crc += hottV4SendWord(formattedLine, 0);
+  
+  // BARO
+  crc += hottV4SendWord(" BARO", rcOptions[BOXBARO]);
+  
+  // Without this it cannot be uploaded to the procs
+  uint8_t barocm = BaroAlt % 10;
+  snprintf(formattedLine, 17, ": %+05d.%02dm      ", (int16_t) BaroAlt / 100, barocm);
+  crc += hottV4SendWord(formattedLine, 0);
+  
+  // Debug 3
+  snprintf(formattedLine, 22, " DEBUG 3   : %+04d     ", debug3);
+  crc += hottV4SendTextline(formattedLine);
+  
+  // Debug 3
+  snprintf(formattedLine, 22, " DEBUG 4   : %+04d     ", debug4);
+  crc += hottV4SendTextline(formattedLine);
+  
+  // I2C Error
+  snprintf(formattedLine, 22, " i2c_error : %d", i2c_errors_count);
+  crc += hottV4SendTextline(formattedLine);
+ 
+  return crc;  
+}
+
+/**
+ * Sends a complete text frame which contains header information, 8x21 chars of payload, and tail information
+ *
+ * @param offset - Current line offset
+ * @param row - Selected row
+ * @param col - Selected row
+ * @param payloadFunc(offset, row, col) - Callback payload function, which should be used to transmit the 8x21 payload chars
+ */
+static void hottV4SendTextFrame(int8_t offset, int8_t row, int8_t col, uint16_t (*payloadFunc) (int8_t, int8_t, int8_t)) {
+  uint16_t crc = 0;
+  
+  // Enable TX mode
+  hottV4EnableTransmitterMode();
+  
+  // Header
   hottV4SerialWrite(0x7B);
   crc += 0x7B;
   
@@ -627,25 +687,17 @@ static uint16_t hottV4SendTextModeHeader() {
   hottV4SerialWrite(alarm);
   crc += alarm;
   
-  return crc;
-}
-
-/**
- * Sends the complete text mode frame
- */
-static void hottV4SendText(int8_t selectedRow, int8_t selectedCol) {
-  hottV4EnableTransmitterMode();
-  uint16_t crc = 0;
-
-  crc += hottV4SendTextModeHeader();
-  crc += hottV4SendFormattedTextblock(0, selectedRow, selectedCol);
+  // Payload
+  crc += (*payloadFunc)(offset, row, col);  
   
+  // Tail
   hottV4SerialWrite(0x7D);
   crc += (0x7D);
   
   uint8_t checksum = crc & 0xFF;
   hottV4SerialWrite(checksum);
   
+  // ...and enable RX mode
   hottV4LoopUntilRegistersReady();
   hottV4EnableReceiverMode();
 }
@@ -710,7 +762,7 @@ static uint8_t nextCol(uint8_t currentCol, uint8_t controllerValue) {
 /**
  * Main method to send PID settings
  */
-static void hottV4SendSettings() {
+static void hottV4HandleTextMode() {
   // Saftey measure because it takes way to long to send data in text mode
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
@@ -718,16 +770,15 @@ static void hottV4SendSettings() {
     static uint8_t row = 1;
     static uint8_t col = 1;
     static uint8_t store = 0;
-    
-    uint8_t sendText = 1;
-    
+    static uint8_t page = 0;
+        
     delay(5);
     uint8_t data = hottV4SerialRead();
     
     switch (data) {
       case HOTTV4_BUTTON_NIL:
-        sendText = 0;
       break;
+      
       case HOTTV4_BUTTON_DEC:
         if (NO == isInEditingMode(col)) {
           if (canSelectLine(row-1)) {
@@ -738,6 +789,7 @@ static void hottV4SendSettings() {
           store = 1;
         }
       break;
+      
       case HOTTV4_BUTTON_INC:
         if (NO == isInEditingMode(col)) {
           if (canSelectLine(row+1)) {
@@ -748,7 +800,8 @@ static void hottV4SendSettings() {
           store = 1;
         }
       break;
-      case HOTTV4_BUTTON_SET:
+      
+      case HOTTV4_BUTTON_SET: {
         HoTTv4ControllerValue controllerValue = settings[row - 1].controllerValue;
         col = nextCol(col, controllerValue);
       
@@ -756,11 +809,26 @@ static void hottV4SendSettings() {
           store = 0;
           writeParams();
         }
+      }
+      break;
+      
+      case HOTTV4_BUTTON_NEXT:
+        if (page == 0) {
+          page++;
+        }
+      break;
+      
+      case HOTTV4_BUTTON_PREV:
+        if (page == 1) {
+          page--;
+        }
       break;
     }
       
-    if (sendText > 0) {
-      hottV4SendText(row, col);
+    if (page == 0) {
+      hottV4SendTextFrame(0, row, col, &hottV4SendPIDSettings);
+    } else if (page == 1) {
+      hottV4SendTextFrame(0, row, col, &hottV4SendDebugInfos);
     }
   }
 }
@@ -787,9 +855,14 @@ uint8_t hottV4Hook(uint8_t serialData) {
     break;
       
     case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
-      hottV4SendSettings();
+      hottV4HandleTextMode();
     break;
+    
+    default:
+      return serialData;
   }
+  
+  return 0;
 }
 
 #endif
