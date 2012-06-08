@@ -40,7 +40,7 @@ Available Telemetry Data
 Available Settings / Information
 --------------
 * Roll, Pitch, Yaw, Alt, GPS, Level, and Mag PID values 
-* Raw ACC, GYRO, MAG values. Getting heighleighted if sensor is activated.
+* Raw ACC, GYRO, MAG, and BARO values. Activated sensor are beeing highlighted.
 * i2c_error and for debug purposes: debug3 and debug4
 
 Supported MCU Hardware
