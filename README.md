@@ -35,10 +35,13 @@ Available Telemetry Data
 * VBAT
 * Relative height over ground
 * Flight time since copter has been armed
+* Direction
 
-Available Settings 
+Available Settings / Information
 --------------
 * Roll, Pitch, Yaw, Alt, GPS, Level, and Mag PID values 
+* Raw ACC, GYRO, MAG values. Getting heighleighted if sensor is activated.
+* i2c_error and for debug purposes: debug3 and debug4
 
 Supported MCU Hardware
 ----------------------
