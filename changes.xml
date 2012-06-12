@@ -15,6 +15,8 @@
         <action type="add">GPS HoTTv4 module emulation, only used to display ALT and DIRECTION</action>
         <action type="add">Debug page that displays raw data for ACC, GYRO, and MAG, DEBUG3, DEBUG4, and i2c_errors. Furthermore ACC. GYRO, MAG getting inverted if sensor is activated.</action>
         <action type="update">Undervoltage alram triggers visual feedback in telemetry view for suitable entries, e.g. MikroKopter power menu element gets completely inverted</action>
+        <action type="update">Horizontal pagination in PID text view to display more than 7 PID setting lines</action>
+        <action type="add">ESC in text mode to quit custom text view properly</action>
     </release>
     
     <release version="1.1" date="03.06.2012" description="Flight time and macros for battery monitoring">
