@@ -21,9 +21,6 @@
 #define HOTTV4_GPS_SENSOR_ID 0xA0 // GPS Sensor ID
 #define HOTTV4_GPS_MODULE  0x8A  // GPS Module ID
 
-// Update interval in ms for the telemetry data
-#define HOTTV4_UPDATE_INTERVAL 2000
-
 #if !defined (HOTTV4_TX_DELAY) 
   #define HOTTV4_TX_DELAY 620
 #endif
@@ -271,7 +268,12 @@ static void hottv4UpdateAlt(uint8_t *data, uint8_t lowByteIndex) {
  * Updates current flight time by counting the seconds from the moment
  * the copter was armed.
  */
-static void hottv4UpdateFlightTime(uint8_t *data, uint16_t timeDiff) {
+static void hottv4UpdateFlightTime(uint8_t *data) {
+  static uint32_t previousEAMUpdate = 0;
+  
+  uint16_t timeDiff = millis() - previousEAMUpdate;
+  previousEAMUpdate += timeDiff;
+  
   if (armed) {
     milliseconds += timeDiff;
     
@@ -322,7 +324,7 @@ void hottv4Setup() {
 /**
  * Main method to send EAM telemetry data
  */
-static void hottV4SendEAMTelemetry(uint16_t timeDiff) {  
+static void hottV4SendEAMTelemetry() {  
   uint8_t telemetry_data[] = { 
               0x7C,
               HOTTV4_ELECTRICAL_AIR_MODULE, 
@@ -358,7 +360,7 @@ static void hottV4SendEAMTelemetry(uint16_t timeDiff) {
     hottv4UpdateAlt(telemetry_data, 26);
   #endif
 
-  hottv4UpdateFlightTime(telemetry_data, timeDiff);
+  hottv4UpdateFlightTime(telemetry_data);
 
   // Write out telemetry data as Electric Air Module to serial           
   hottV4SendBinary(telemetry_data, 44);
@@ -604,7 +606,7 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
  */
 static uint16_t hottV4SendPIDSettings(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
-  crc += hottV4SendTextline(" MultiWii - PID     >");
+  crc += hottV4SendTextline(" MultiWii - PID    <>");
   
   for (int8_t index = lineOffset; index < (lineOffset + 7); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;    
@@ -702,6 +704,41 @@ static void hottV4SendTextFrame(int8_t offset, int8_t row, int8_t col, uint16_t 
   hottV4EnableReceiverMode();
 }
 
+static void hottV4Esc() {
+  uint16_t crc = 0;
+  
+  // Enable TX mode
+  hottV4EnableTransmitterMode();
+  
+  // Header
+  hottV4SerialWrite(0x7B);
+  crc += 0x7B;
+  
+  // ESC Sequence
+  hottV4SerialWrite(0x01);
+  crc += 0x01;
+  
+  uint8_t alarm = 0x00;
+  hottV4SerialWrite(alarm);
+  crc += alarm;
+  
+  // Payload
+  for (uint8_t index = 0; index < 168; index++) {
+    hottV4SendChar(0x0, 0);
+  }
+  
+  // Tail
+  hottV4SerialWrite(0x7D);
+  crc += (0x7D);
+  
+  uint8_t checksum = crc & 0xFF;
+  hottV4SerialWrite(checksum);
+  
+  // ...and enable RX mode
+  hottV4LoopUntilRegistersReady();
+  hottV4EnableReceiverMode();
+}
+
 /**
  * Updates the system wide PID settings.
  * @param row Which row is currently selected in the menu --> ROLL, PITCH, YAW, etc.
@@ -771,8 +808,8 @@ static void hottV4HandleTextMode() {
     static uint8_t col = 1;
     static uint8_t store = 0;
     static uint8_t page = 0;
-        
-    delay(5);
+    
+    delay(5);    
     uint8_t data = hottV4SerialRead();
     
     switch (data) {
@@ -819,13 +856,16 @@ static void hottV4HandleTextMode() {
       break;
       
       case HOTTV4_BUTTON_PREV:
-        if (page == 1) {
+        if (page == 1 || page == 0) {
           page--;
-        }
+        } 
       break;
     }
-      
-    if (page == 0) {
+    
+    if (page == -1) {
+      page = 0;
+      hottV4Esc();
+    } else if (page == 0) {
       hottV4SendTextFrame(0, row, col, &hottV4SendPIDSettings);
     } else if (page == 1) {
       hottV4SendTextFrame(0, row, col, &hottV4SendDebugInfos);
@@ -843,14 +883,7 @@ uint8_t hottV4Hook(uint8_t serialData) {
     break;
     
     case HOTTV4_ELECTRICAL_AIR_MODULE: {
-      static uint32_t previousEAMUpdate = 0;
-      
-      uint16_t timeDiff = millis() - previousEAMUpdate;
-
-      //if (timeDiff >= HOTTV4_UPDATE_INTERVAL) {
-        previousEAMUpdate += timeDiff;
-        hottV4SendEAMTelemetry(timeDiff);
-      //}
+      hottV4SendEAMTelemetry();
     }
     break;
       
