@@ -422,6 +422,9 @@ static void hottV4SendGPSTelemetry() {
  *                HoTTv4 Text Mode                                       *
  * ##################################################################### */
 
+#define HOTTV4_TEXT_PAGE_PID 0
+#define HOTTV4_TEXT_PAGE_DEBUG 1
+
 // Defines which controller values can be changed for ROLL, PITCH, YAW, etc.
 typedef enum {
   HoTTv4ControllerValueP = 1 << 0,
@@ -435,10 +438,8 @@ typedef struct {
   HoTTv4ControllerValue controllerValue;
 } HoTTv4TextModeData;
 
-#define HOTTV4_SETTING_LINES 7
-
 /**
- * All 7 lines that are displayed
+ * All PID lines that are displayed
  */
 static HoTTv4TextModeData settings[] = { 
                                          {"ROLL :", 0, HoTTv4ControllerValuePID}, 
@@ -447,7 +448,7 @@ static HoTTv4TextModeData settings[] = {
                                          {"ALT  :", PIDALT, HoTTv4ControllerValuePID},
                                          {"GPS  :", PIDGPS, HoTTv4ControllerValuePID},
                                          {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuePID},
-                                         {"MAG  :", PIDMAG, HoTTv4ControllerValueP}
+                                         {"MAG  :", PIDMAG, HoTTv4ControllerValueP},
                                        }; 
 
 /**
@@ -604,9 +605,11 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
  *
  * @return crc value
  */
-static uint16_t hottV4SendPIDSettings(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
+static uint16_t hottV4SendPIDSettings(int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
   crc += hottV4SendTextline(" MultiWii - PID    <>");
+  
+  uint8_t lineOffset = selectedRow / 8;
   
   for (int8_t index = lineOffset; index < (lineOffset + 7); index++) {
     int8_t col = ((index + 1) == selectedRow) ? selectedCol : 0;    
@@ -620,7 +623,7 @@ static uint16_t hottV4SendPIDSettings(int8_t lineOffset, int8_t selectedRow, int
  * Sends a complete 8x21 digit text block containg several debug information.
  * @return crc value
  */
-static uint16_t hottV4SendDebugInfos(int8_t lineOffset, int8_t selectedRow, int8_t selectedCol) {
+static uint16_t hottV4SendDebugInfos(int8_t selectedRow, int8_t selectedCol) {
   uint16_t crc = 0;
   
   crc += hottV4SendTextline(" MultiWii - DEBUG  < ");
@@ -667,12 +670,11 @@ static uint16_t hottV4SendDebugInfos(int8_t lineOffset, int8_t selectedRow, int8
 /**
  * Sends a complete text frame which contains header information, 8x21 chars of payload, and tail information
  *
- * @param offset - Current line offset
  * @param row - Selected row
  * @param col - Selected row
  * @param payloadFunc(offset, row, col) - Callback payload function, which should be used to transmit the 8x21 payload chars
  */
-static void hottV4SendTextFrame(int8_t offset, int8_t row, int8_t col, uint16_t (*payloadFunc) (int8_t, int8_t, int8_t)) {
+static void hottV4SendTextFrame(int8_t row, int8_t col, uint16_t (*payloadFunc) (int8_t, int8_t)) {
   uint16_t crc = 0;
   
   // Enable TX mode
@@ -690,7 +692,7 @@ static void hottV4SendTextFrame(int8_t offset, int8_t row, int8_t col, uint16_t 
   crc += alarm;
   
   // Payload
-  crc += (*payloadFunc)(offset, row, col);  
+  crc += (*payloadFunc)(row, col);  
   
   // Tail
   hottV4SerialWrite(0x7D);
@@ -773,8 +775,14 @@ static uint8_t isInEditingMode(uint8_t col) {
  * Determines if given row can be selected as next line.
  * Returns 1 if next line can be selected, everything else otherwise.
  */
-static uint8_t canSelectLine(uint8_t row) {
-  return (row > 0) && (row <= HOTTV4_SETTING_LINES);
+static uint8_t canSelectLine(uint8_t page, uint8_t row) {
+  switch(page) {
+    case HOTTV4_TEXT_PAGE_PID:
+      return (row > 0) && (row <= 7);
+      break;
+    default:
+      return 0;
+  }
 }
 
 /**
@@ -818,7 +826,7 @@ static void hottV4HandleTextMode() {
       
       case HOTTV4_BUTTON_DEC:
         if (NO == isInEditingMode(col)) {
-          if (canSelectLine(row-1)) {
+          if (canSelectLine(page, row-1)) {
             row--;
           }
         } else {
@@ -829,7 +837,7 @@ static void hottV4HandleTextMode() {
       
       case HOTTV4_BUTTON_INC:
         if (NO == isInEditingMode(col)) {
-          if (canSelectLine(row+1)) {
+          if (canSelectLine(page, row+1)) {
             row++; 
           }
         } else {
@@ -865,10 +873,10 @@ static void hottV4HandleTextMode() {
     if (page == -1) {
       page = 0;
       hottV4Esc();
-    } else if (page == 0) {
-      hottV4SendTextFrame(0, row, col, &hottV4SendPIDSettings);
-    } else if (page == 1) {
-      hottV4SendTextFrame(0, row, col, &hottV4SendDebugInfos);
+    } else if (page == HOTTV4_TEXT_PAGE_PID) {
+      hottV4SendTextFrame(row, col, &hottV4SendPIDSettings);
+    } else if (page == HOTTV4_TEXT_PAGE_DEBUG) {
+      hottV4SendTextFrame(row, col, &hottV4SendDebugInfos);
     }
   }
 }
