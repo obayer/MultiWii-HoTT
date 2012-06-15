@@ -21,6 +21,9 @@
 #define HOTTV4_GPS_SENSOR_ID 0xA0 // GPS Sensor ID
 #define HOTTV4_GPS_MODULE  0x8A  // GPS Module ID
 
+#define HOTTV4_VARIO_SENSOR_ID 0x90 // Vario Sensor ID
+#define HOTTV4_VARIO_MODULE 0x89 // Vario Sensor Module ID
+
 #if !defined (HOTTV4_TX_DELAY) 
   #define HOTTV4_TX_DELAY 620
 #endif
@@ -29,6 +32,8 @@
 
 #define NO 0
 #define YES 1
+
+#define VARIO_ASCIIS 21
 
 #define HOTTV4_BUTTON_DEC 0xEB
 #define HOTTV4_BUTTON_INC 0xED
@@ -182,13 +187,13 @@ static void hottV4LoopUntilRegistersReady() {
  * Write out given telemetry data to serial interface.
  * Given CRC is ignored and calculated on the fly.
  */ 
-static void hottV4SendBinary(uint8_t *data, uint8_t length) {
+static void hottV4SendBinary(uint8_t *data) {
   uint16_t crc = 0;
   
   /* Enables TX / Disables RX */
   hottV4EnableTransmitterMode();
    
-  for (uint8_t index = 0; index < length; index++) {  
+  for (uint8_t index = 0; index < 44; index++) {  
     crc = crc + data[index]; 
     hottV4SerialWrite(data[index]);    
    }
@@ -237,12 +242,12 @@ static void hottV4TriggerNotification(uint8_t *data, uint8_t notification) {
  * Resolution is in 0,1V, e.g. 0x7E == 12,6V.
  * Min. value = 0V
  * Max. value = 25,6V 
- * If value is below HOTTV4_VBATLEVEL_3S, telemetry alarm is triggered
+ * If value is below HOTTV4_VOLTAGE_WARNING, telemetry alarm is triggered
  */
 static void hottv4UpdateBattery(uint8_t *data) {
   data[30] = vbat; 
 
-  // Activate low voltage alarm if above 5.0V
+  // Activate low voltage alarm if above 3.0V
   if (vbat <= HOTTV4_VOLTAGE_WARNING && vbat > 30) {
     hottV4TriggerNotification(data, HoTTv4NotificationUndervoltage);
   } else if (vbat > HOTTV4_VOLTAGE_MAX) {
@@ -363,7 +368,7 @@ static void hottV4SendEAMTelemetry() {
   hottv4UpdateFlightTime(telemetry_data);
 
   // Write out telemetry data as Electric Air Module to serial           
-  hottV4SendBinary(telemetry_data, 44);
+  hottV4SendBinary(telemetry_data);
 }
 
 /* ##################################################################### *
@@ -415,7 +420,73 @@ static void hottV4SendGPSTelemetry() {
   #endif
   
   // Write out telemetry data as GPS Module to serial           
-  hottV4SendBinary(telemetry_data, 44);
+  hottV4SendBinary(telemetry_data);
+}
+
+/* ##################################################################### *
+ *                HoTTv4 Vario Module                                    *
+ * ##################################################################### */
+
+/**
+ * Main method to send Vario telemetry data
+ */
+static void hottV4SendVarioTelemetry() {
+  uint8_t telemetry_data[] = { 
+              0x7C,
+              HOTTV4_VARIO_MODULE, 
+              0x00, /* Alarm */
+              HOTTV4_VARIO_SENSOR_ID,
+              0x00, /* Inverse status */
+              0xF4, 0x01, /* Current altitude */ 
+              0xF4, 0x01, /* Max. altitude */ 
+              0xF4, 0x01, /* Min. altitude */
+              0x30, 0x75, /* m/s */
+              0x30, 0x75, /* m/3s  */
+              0x30, 0x75, /* m/10s */
+              0x00, 0x00, 0x00, 0x00, /* ASCII */
+              0x00, 0x00, 0x00, 0x00, /* ASCII */
+              0x00, 0x00, 0x00, 0x00, /* ASCII */
+              0x00, 0x00, 0x00, 0x00, /* ASCII */
+              0x00, 0x00, 0x00, 0x00, /* ASCII */
+              0x00,                   /* ASCII */
+              0x00, 0x00, 0x00, 0x00, /* free */
+              0x00, /* Version Number */
+              0x7D, /* End sign */
+              0x00  /* Checksum */
+            };
+  
+  // Buffer for the available 21 ASCII + \0 chars
+  char text[VARIO_ASCIIS+1];
+  
+  if (i2c_errors_count > 0) {
+    snprintf(text, VARIO_ASCIIS+1, "Error Databus: %d", i2c_errors_count);
+  } else if (rcOptions[BOXGPSHOME]) {
+    snprintf(text, VARIO_ASCIIS+1, "Return To Home");
+  } else if (rcOptions[BOXGPSHOLD]) {
+    snprintf(text, VARIO_ASCIIS+1, "Position Hold");
+  } else if (rcOptions[BOXBARO]) {
+    snprintf(text, VARIO_ASCIIS+1, "Altitude Hold");
+  } else if (rcOptions[BOXHEADFREE]) {
+    snprintf(text, VARIO_ASCIIS+1, "Headfree");
+  } else if (rcOptions[BOXACC]) {
+    snprintf(text, VARIO_ASCIIS+1, "Stable Mode");
+  } else {
+    snprintf(text, VARIO_ASCIIS+1, "---");
+  }
+
+  uint8_t offset = (VARIO_ASCIIS - strlen(text)) / 2;
+
+  for(uint8_t index = 0; (index + offset) < VARIO_ASCIIS; index++) {
+    if (text[index] != 0x0) {
+      // 17 == start byte for ASCII
+      telemetry_data[17+index+offset] = text[index];
+    } else {
+      break;
+    }
+  }  
+            
+  // Write out telemetry data as Vario Module to serial           
+  hottV4SendBinary(telemetry_data);
 }
 
 /* ##################################################################### *
@@ -888,17 +959,20 @@ uint8_t hottV4Hook(uint8_t serialData) {
   switch (serialData) {
     case HOTTV4_GPS_MODULE:
       hottV4SendGPSTelemetry();
-    break;
+      break;
     
-    case HOTTV4_ELECTRICAL_AIR_MODULE: {
+    case HOTTV4_ELECTRICAL_AIR_MODULE:
       hottV4SendEAMTelemetry();
-    }
-    break;
+      break;
       
     case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
       hottV4HandleTextMode();
-    break;
+      break;
     
+    case HOTTV4_VARIO_MODULE:
+      hottV4SendVarioTelemetry();
+      break;
+
     default:
       return serialData;
   }
