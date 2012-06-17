@@ -28,6 +28,14 @@
   #define HOTTV4_TX_DELAY 620
 #endif
 
+/** ###### VARIO Text ###### */
+#define HOTTV4_VARIO_ERROR_DATABUS "Error Databus"
+#define HOTTV4_VARIO_RETURN_HOME "Return To Home" 
+#define HOTTV4_VARIO_POSITION_HOME "Position Hold"
+#define HOTTV4_VARIO_ALT_HOLD "Altitude Hold"
+#define HOTTV4_VARIO_HEADFREE "Headfree" 
+#define HOTTV4_VARIO_STABLE "Stable Mode"
+
 /** ###### Common settings ###### */
 
 #define NO 0
@@ -459,17 +467,17 @@ static void hottV4SendVarioTelemetry() {
   char text[VARIO_ASCIIS+1];
   
   if (i2c_errors_count > 0) {
-    snprintf(text, VARIO_ASCIIS+1, "Error Databus: %d", i2c_errors_count);
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_ERROR_DATABUS); 
   } else if (rcOptions[BOXGPSHOME]) {
-    snprintf(text, VARIO_ASCIIS+1, "Return To Home");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_RETURN_HOME);
   } else if (rcOptions[BOXGPSHOLD]) {
-    snprintf(text, VARIO_ASCIIS+1, "Position Hold");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_POSITION_HOME);
   } else if (rcOptions[BOXBARO]) {
-    snprintf(text, VARIO_ASCIIS+1, "Altitude Hold");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_ALT_HOLD);
   } else if (rcOptions[BOXHEADFREE]) {
-    snprintf(text, VARIO_ASCIIS+1, "Headfree");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_HEADFREE);
   } else if (rcOptions[BOXACC]) {
-    snprintf(text, VARIO_ASCIIS+1, "Stable Mode");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_STABLE);
   } else {
     snprintf(text, VARIO_ASCIIS+1, "---");
   }
