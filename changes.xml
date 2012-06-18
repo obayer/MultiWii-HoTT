@@ -13,7 +13,7 @@
   <body>
     <release version="sid" date="" description="">
         <action type="add">VARIO HoTTv4 module emulation, to display current activated use cases: ALT Hold, Stable Mode, Position Hold, Return to Home, Databus Error</action>
-        <action type="add">GPS HoTTv4 module emulation, only used to display ALT and DIRECTION</action>
+        <action type="add">GPS HoTTv4 module emulation, to display ALT, DIRECTION, Distance To Home, Latitude, and Longitude</action>
         <action type="add">Debug page that displays raw data for ACC, GYRO, and MAG, DEBUG3, DEBUG4, and i2c_errors. Furthermore ACC. GYRO, MAG getting inverted if sensor is activated.</action>
         <action type="update">Undervoltage alram triggers visual feedback in telemetry view for suitable entries, e.g. MikroKopter power menu element gets completely inverted</action>
         <action type="update">Horizontal pagination in PID text view to display more than 7 PID setting lines</action>

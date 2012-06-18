@@ -271,8 +271,15 @@ static void hottv4UpdateBattery(uint8_t *data) {
  * @param lowByteIndex Index for the low byte that represents the altitude in telemetry data frame
  */
 static void hottv4UpdateAlt(uint8_t *data, uint8_t lowByteIndex) {
-  int32_t alt = ((EstAlt - referenceAltitude) / 100) + 500;
+  int32_t alt;
   
+  if (!GPS_fix) {
+    alt = EstAlt - referenceAltitude;
+  } else {
+    alt = GPS_altitude;
+  }
+  
+  alt = (alt / 100) + 500;
   data[lowByteIndex] = alt;
   data[lowByteIndex + 1] = (alt >> 8) & 0xFF;  
 }
@@ -384,6 +391,26 @@ static void hottV4SendEAMTelemetry() {
  * ##################################################################### */
 
 /**
+ * Converts unsigned long representation of GPS coordinate back to
+ * N Deg MM.SSSS representation and puts it into GPS data frame.
+ */
+static void updatePosition(uint8_t *data, uint32_t value, uint8_t index) {
+  data[index] = (value < 0); 
+
+  uint8_t deg = value / 100000;
+  uint32_t sec = (value - (deg * 100000)) * 6;
+  uint8_t min = sec / 10000;
+  sec = sec % 10000;
+  
+  uint16_t degMin = (deg * 100) + min;
+
+  data[index+1] = degMin;
+  data[index+2] = degMin >> 8; 
+  data[index+3] = sec; 
+  data[index+4] = sec >> 8;
+}
+
+/**
  * Main method to send GPS telemetry data
  */
 static void hottV4SendGPSTelemetry() {
@@ -395,8 +422,8 @@ static void hottV4SendGPSTelemetry() {
               0x00, 0x00, /* Alarm Value 1 and 2 */
               0x00, /* Flight direction */ 
               0x00, 0x00, /* Velocity */ 
-              0x00, 0x00, 0x00, 0x00, 0x00, /*  */
-              0x00, 0x00, 0x00, 0x00, 0x00, /* */
+              0x00, 0x00, 0x00, 0x00, 0x00, /* Latitude */
+              0x00, 0x00, 0x00, 0x00, 0x00, /* Longitude */
               0x00, 0x00, /* Distance */
               0xF4, 0x01, /* Altitude, 500 = 0m */
               0x78, 0x00, /* m/s, 1 = 0.01m/s */ 
@@ -418,6 +445,26 @@ static void hottV4SendGPSTelemetry() {
               0x7D, /* End sign */
               0x00 /* Checksum */
             };
+
+  #if defined(GPS)
+    /** GPS number of sats */
+    telemetry_data[26] = GPS_numSat;
+
+    if (GPS_fix) {
+      updatePosition(telemetry_data, GPS_latitude, 9);
+      updatePosition(telemetry_data, GPS_longitude, 14);
+
+      /** GPS fix */
+      telemetry_data[41] = 0x66; // Displays a 'f' for fix
+      
+      /** GPS Speed in km/h */
+      telemetry_data[7] = (GPS_speed / 100) * 36; // 0.1m/s * 0.36 = km/h
+
+      /** Distance to home */
+      telemetry_data[19] = GPS_distanceToHome;
+      telemetry_data[20] = (GPS_distanceToHome >> 8);
+    }
+  #endif
           
   #if defined(HOTTV4ALTITUDE)
     hottv4UpdateAlt(telemetry_data, 21);
