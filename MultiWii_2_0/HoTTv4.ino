@@ -512,7 +512,7 @@ typedef enum {
 
 // Defines structure of Preamble text, the corresponding PID index, which PID values can be changed.
 typedef struct {
-  char *label;
+  const char *label;
   uint8_t pidIndex;
   HoTTv4ControllerValue controllerValue;
 } HoTTv4TextModeData;
@@ -564,7 +564,7 @@ static uint8_t hottV4SendChar(char c, uint8_t inverted) {
  *
  * @return crc value
  */
-static uint16_t hottV4SendWord(char *w, uint8_t inverted) {
+static uint16_t hottV4SendWord(const char *w, uint8_t inverted) {
   uint16_t crc = 0;
   
   for (uint8_t index = 0; index < 21 ; index++) {
@@ -582,7 +582,7 @@ static uint16_t hottV4SendWord(char *w, uint8_t inverted) {
  * Sends one line of text max. 21 chars. If less than 21 chars, rest
  * is filled with whitespace chars.
  */
-static uint16_t hottV4SendTextline(char *line) {
+static uint16_t hottV4SendTextline(const char *line) {
   uint16_t crc = 0;
   uint8_t useZeroBytes = 0;
   
@@ -647,8 +647,8 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
   uint8_t index = textData->pidIndex;
   
   char label[8];
-  char selectionIndicator = (selectedCol > 0) ? '>' : ' ';
-
+  const char selectionIndicator = (selectedCol > 0) ? '>' : ' ';
+  
   snprintf(label, 8, "%c%s", selectionIndicator, textData->label);  
   crc += hottV4SendWord(label, 0);
   
