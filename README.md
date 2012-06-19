@@ -25,7 +25,7 @@ What's Needed
 3. RxTx signal cable from MCU's UART Pins to the receiver's telemetry port.
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
 
-For detailed information see the [wiki pages](MultiWii-HoTT/wiki).
+For detailed information, see [wiki pages](MultiWii-HoTT/wiki).
 
 Configuration
 -------------
@@ -37,6 +37,8 @@ Available Telemetry Data
 * Relative height over ground
 * Flight time since copter has been armed
 * Direction
+
+For detailed information, see [changes.xml]
 
 Available Settings / Information
 --------------
@@ -66,3 +68,4 @@ telemetry data are updated with 0.5Hz.
 [Graupner]: http://www.graupner.de/
 [PID settings]: http://www.youtube.com/watch?v=rItCvYUPo_o
 [flies]: http://www.youtube.com/watch?v=8MEnRZlQoGY
+[changes.xml]: https://github.com/obayer/MultiWii-HoTT/blob/master/changes.xml
