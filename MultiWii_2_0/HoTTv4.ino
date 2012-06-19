@@ -99,7 +99,7 @@ typedef enum {
 
 /** 
  * Stores current altitude level, so telemetry altitude
- * prints relative hight from ground.
+ * prints relative height over ground.
  */
 static int32_t referenceAltitude = 0;
 
