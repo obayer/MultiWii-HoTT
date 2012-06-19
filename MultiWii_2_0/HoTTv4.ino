@@ -25,16 +25,18 @@
 #define HOTTV4_VARIO_MODULE 0x89 // Vario Sensor Module ID
 
 #if !defined (HOTTV4_TX_DELAY) 
-  #define HOTTV4_TX_DELAY 620
+  #define HOTTV4_TX_DELAY 615
 #endif
 
 /** ###### VARIO Text ###### */
+
 #define HOTTV4_VARIO_ERROR_DATABUS "Error Databus"
 #define HOTTV4_VARIO_RETURN_HOME "Return To Home" 
-#define HOTTV4_VARIO_POSITION_HOME "Position Hold"
+#define HOTTV4_VARIO_POSITION_HOLD "Position Hold"
 #define HOTTV4_VARIO_ALT_HOLD "Altitude Hold"
 #define HOTTV4_VARIO_HEADFREE "Headfree" 
 #define HOTTV4_VARIO_STABLE "Stable Mode"
+#define HOTTV4_VARIO_EMPTY "---"
 
 /** ###### Common settings ###### */
 
@@ -518,7 +520,7 @@ static void hottV4SendVarioTelemetry() {
   } else if (rcOptions[BOXGPSHOME]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_RETURN_HOME);
   } else if (rcOptions[BOXGPSHOLD]) {
-    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_POSITION_HOME);
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_POSITION_HOLD);
   } else if (rcOptions[BOXBARO]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_ALT_HOLD);
   } else if (rcOptions[BOXHEADFREE]) {
@@ -526,7 +528,7 @@ static void hottV4SendVarioTelemetry() {
   } else if (rcOptions[BOXACC]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_STABLE);
   } else {
-    snprintf(text, VARIO_ASCIIS+1, "---");
+    snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_EMPTY);
   }
 
   uint8_t offset = (VARIO_ASCIIS - strlen(text)) / 2;
@@ -893,8 +895,8 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
  * Determines if current selected col can be edited.
  * Returns 1 if given col can be edited, everything else otherwise.
  */
-static uint8_t isInEditingMode(uint8_t col) {
-  return col > 1;
+static uint8_t isInEditingMode(uint8_t page, uint8_t col) {
+  return (col > 1) && (HOTTV4_TEXT_PAGE_PID == page);
 }
 
 /**
@@ -917,17 +919,19 @@ static uint8_t canSelectLine(uint8_t page, uint8_t row) {
  *
  * @return Number of next valid col.
  */
-static uint8_t nextCol(uint8_t currentCol, uint8_t controllerValue) {
+static uint8_t nextCol(uint8_t page, uint8_t currentCol, uint8_t controllerValue) {
   HoTTv4ControllerValue val = (HoTTv4ControllerValue)controllerValue;
-
-  switch(val) {
-    case HoTTv4ControllerValuePID:
-      return (currentCol < 4) ? currentCol+1 : 1;
-    case HoTTv4ControllerValueP:
-      return (currentCol < 2) ? currentCol+1 : 1;
-    default:
-      return 1;
+  
+  if (HOTTV4_TEXT_PAGE_PID == page) {
+    switch(val) {
+      case HoTTv4ControllerValuePID:
+        return (currentCol < 4) ? currentCol+1 : 1;
+      case HoTTv4ControllerValueP:
+        return (currentCol < 2) ? currentCol+1 : 1;
+    }
   }
+
+  return 1;
 }
 
 /**
@@ -951,7 +955,7 @@ static void hottV4HandleTextMode() {
       break;
       
       case HOTTV4_BUTTON_DEC:
-        if (NO == isInEditingMode(col)) {
+        if (NO == isInEditingMode(page, col)) {
           if (canSelectLine(page, row-1)) {
             row--;
           }
@@ -962,7 +966,7 @@ static void hottV4HandleTextMode() {
       break;
       
       case HOTTV4_BUTTON_INC:
-        if (NO == isInEditingMode(col)) {
+        if (NO == isInEditingMode(page, col)) {
           if (canSelectLine(page, row+1)) {
             row++; 
           }
@@ -974,7 +978,7 @@ static void hottV4HandleTextMode() {
       
       case HOTTV4_BUTTON_SET: {
         HoTTv4ControllerValue controllerValue = settings[row - 1].controllerValue;
-        col = nextCol(col, controllerValue);
+        col = nextCol(page, col, controllerValue);
       
         if (store > 0) {
           store = 0;
@@ -990,16 +994,16 @@ static void hottV4HandleTextMode() {
       break;
       
       case HOTTV4_BUTTON_PREV:
-        if (page == 1 || page == 0) {
+        if (page == 1) {
           page--;
-        } 
+        } else if (page == 0) {
+          hottV4Esc();
+          return;
+        }
       break;
     }
     
-    if (page == -1) {
-      page = 0;
-      hottV4Esc();
-    } else if (page == HOTTV4_TEXT_PAGE_PID) {
+    if (page == HOTTV4_TEXT_PAGE_PID) {
       hottV4SendTextFrame(row, col, &hottV4SendPIDSettings);
     } else if (page == HOTTV4_TEXT_PAGE_DEBUG) {
       hottV4SendTextFrame(row, col, &hottV4SendDebugInfos);
@@ -1010,7 +1014,7 @@ static void hottV4HandleTextMode() {
 /**
  * Main entry point for HoTTv4 telemetry
  */
-uint8_t hottV4Hook(uint8_t serialData) {  
+uint8_t hottV4Hook(uint8_t serialData) {
   switch (serialData) {
     case HOTTV4_GPS_MODULE:
       hottV4SendGPSTelemetry();
@@ -1031,7 +1035,7 @@ uint8_t hottV4Hook(uint8_t serialData) {
     default:
       return serialData;
   }
-  
+
   return 0;
 }
 
