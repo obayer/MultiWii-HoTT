@@ -8,7 +8,7 @@ Licensed under [GPLv3].
 Caution
 ------------
 Please don't use the extension provided directly from master branch as it is software in development, which could mean that
-it has never been tested out in the field. Tags are tested on a real QuadX out in the field that they are ready to fly.
+it has never been tested out in the field. [tags](Tags) are tested on a real QuadX out in the field that they are ready to fly.
 
 How It Works
 ------------
@@ -69,3 +69,4 @@ telemetry data are updated with 0.5Hz.
 [PID settings]: http://www.youtube.com/watch?v=rItCvYUPo_o
 [flies]: http://www.youtube.com/watch?v=8MEnRZlQoGY
 [changes.xml]: https://github.com/obayer/MultiWii-HoTT/blob/master/changes.xml
+[tags]: https://github.com/obayer/MultiWii-HoTT/tags
