@@ -2,11 +2,11 @@
 
 #if defined(HOTTV4_TELEMETRY)
 
-#if defined(BMP085) || defined(MS561101BA) || defined (FREEIMUv043) || defined (GPS)
+#if defined(BARO) || defined (GPS)
   #define HOTTV4ALTITUDE
 #endif
 
-#if defined(FREEIMUv043) || defined (GPS)
+#if defined(MAG) || defined (GPS)
   #define HOTTV4DIR
 #endif
 
