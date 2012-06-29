@@ -12,9 +12,9 @@ it has never been tested out in the field. [Tags](MultiWii-HoTT/tags) are tested
 
 How It Works
 ------------
-Sensor data are continously gathered by the flight control software. Every 2 seconds selected sensor data (e.g. LiPo voltage) are packed into a format
-that conforms to the HoTT protocol specifications and is beeing sent to the receiver via MCUs serial interface (RX0TX0 on non Mega2560 platforms, RX3TX3 on Mega2560).
-Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module. 
+Sensor data are continously gathered by the flight control software. Every time the RX requestes telemetry data corresponding sensor data (e.g. LiPo voltage) are packed into a format
+that conforms to the HoTT protocol and is beeing sent to the RX via serial interface (RX0TX0 on non ATMega2560 platforms, RX3TX3 on ATMega2560).
+Thereby the MCU acts as a HoTT capable sensor and emulates a General Electric Air Module, VARIO Module, or GPS Module. 
 Furthermore, the HoTT textmode capability allows complete customizable text output, this is used to display and change the current [PID settings], as well as debug data
 and activated sensors. 
 
@@ -37,6 +37,9 @@ Available Telemetry Data
 * Relative height over ground
 * Flight time since copter has been armed
 * Direction
+* Distance to home
+* Number of satelittes
+* Longitude/Latitude
 
 For detailed information, see [changes.xml]
 
@@ -48,20 +51,19 @@ Available Settings / Information
 
 Supported MCU Hardware
 ----------------------
-Arduino ProMini, Uno, Mega2560
-
+ATMega328, ATMega2560
 Supported Sensor
 ----------------
 * freeIMU0.4.3
 * BMP085
 * MS561101BA
+* Serial/I2C GPS
 
 Limitations
 -----------
 * On MCU platforms that only have one UART, e.g. Arduino ProMini MultiWiiConf Tool cannot be used when telemetry is activated, 
 this means you have to recompile the code and deactivate HoTT telemetry to be able to use MultiWiiConf Tool. 
-* Increases cycle time up to 35ms every time when telemetry data are transmitted (but it still [flies]). That's the reason, why
-telemetry data are updated with 0.5Hz.
+* Increases cycle time up to 35ms every time when telemetry data are transmitted (but it still [flies]).
 
 [GPLv3]: https://github.com/obayer/MultiWii-HoTT/blob/master/LICENSE.txt
 [Alexinparis]: http://www.multiwii.com/
