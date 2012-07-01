@@ -62,7 +62,7 @@ Supported Sensor
 Limitations
 -----------
 * The HoTT protocol has some technichal limitation that prevents from sending telemetry data in a apporiate time frame which does not interfere motor control.
-that is the reason why only every 2 seconds one telemetry frame is send, even if it is requested more often. Which results in stop and go telemetry data on the display.
+That is the reason why only every 2 seconds one telemetry frame is send, even if it is requested more often. Which results in stop and go telemetry data on the display.
 My recommendation is, that you enable only one telemetry sensor at the time, e.g. Electric Air Module, as the stop and go stops if only one sensor is active.
 * On MCU platforms that only have one UART, e.g. Arduino ProMini MultiWiiConf Tool cannot be used when telemetry is activated, 
 this means you have to recompile the code and deactivate HoTT telemetry to be able to use MultiWiiConf Tool. 
