@@ -2,6 +2,8 @@
 
 #if defined(HOTTV4_TELEMETRY)
 
+#define HOTTV4_UPDATE_INTERVAL 2000
+
 #if defined(BARO) || defined (GPS)
   #define HOTTV4ALTITUDE
 #endif
@@ -1012,24 +1014,46 @@ static void hottV4HandleTextMode() {
 }
 
 /**
+ * Check if enough time has been elapsed since last telemetry update to
+ * prevent too much interference with motor control.
+ */
+uint8_t canSendTelemetry() {
+  static uint16_t lastTimeUpdated = 0;
+  
+  if ((millis() - lastTimeUpdated) > HOTTV4_UPDATE_INTERVAL) {
+    lastTimeUpdated = millis();
+    
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/**
  * Main entry point for HoTTv4 telemetry
  */
 uint8_t hottV4Hook(uint8_t serialData) {
   switch (serialData) {
     case HOTTV4_GPS_MODULE:
-      hottV4SendGPSTelemetry();
+      if (canSendTelemetry()) {
+        hottV4SendGPSTelemetry();
+      }
       break;
     
     case HOTTV4_ELECTRICAL_AIR_MODULE:
-      hottV4SendEAMTelemetry();
+      if (canSendTelemetry()) {
+        hottV4SendEAMTelemetry();
+      }
       break;
-      
-    case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
-      hottV4HandleTextMode();
+         
+    case HOTTV4_VARIO_MODULE:
+      if (canSendTelemetry()) {
+        hottV4SendVarioTelemetry();
+      }
       break;
     
-    case HOTTV4_VARIO_MODULE:
-      hottV4SendVarioTelemetry();
+    case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
+      hottV4HandleTextMode();
       break;
 
     default:
