@@ -20,7 +20,7 @@ and activated sensors.
 
 What's Needed
 ------------
-1. HoTT v4 capable RxTx system
+1. HoTT v4 capable RxTx system (Please make sure, that you have the latest official available firmware from Grauper on your transmitter and receiver).
 2. Enabled telemetry downlink channel on the receiver
 3. RxTx signal cable from MCU's UART Pins to the receiver's telemetry port.
 4. Update your MCU with this compiled project (please review config.h before uploading to match your settings).
