@@ -1,3 +1,226 @@
+2.0 -> 2.1
+
+Some things everyone should be aware before upgrading to this version.
+
+  WMP and NUNCHUCK are no longer auto recognized.
+  You must explicitly declare them (or just WMP) in config.h
+
+  Pullups are now undefined by default
+    (think about activating it if you use a WMP only conf)
+  LCD is not activated by default
+
+  Failsafe is not activated by default
+
+  VBAT monitoring is not activted by default
+
+  There is no more .pde files
+  You must use Arduino 1.0 or greater to compile the sketch (and open Multiwii.ino)
+
+  If the GUI does not work on your setup,
+    try to deactivate hardware acceleration for your display board
+    or use an alternative GUI like WinGUI
+
+  MultiWii is not a product, nor a plug and play solution.
+  Don't expect to buy a compatible board and run it without a minimum knowledge.
+
+
+Receiver part
+  OpenLRS Multi board support done
+    This is a board including an OpenLRS receiver where the atmel
+    is used also to run multiwii code.
+    more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1438 
+
+
+Multiwii Serial Protocol
+  It's a new protocol to communicate with the FC
+  It was introduced by me and tuned by Tommie
+  It's a huge change, but it should ensure a generic way to communicate with the FC
+  which is less dependant to version evolutions.
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1516
+  
+  Now, there is no mod to multiwii code if we want to add a GUI/OSD/conf tool/...
+
+  Compatible GUI:
+   open source code, compatible with the new serial protocol:
+    WinGUI from EOSBandi, which is fully equivalent with the original one,
+     with a better look
+      more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1229
+    mwGui from kos
+      more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1791
+    Android ones via serial bluetooth:
+     - adding a bluetooth module to multiwii
+       more info here: http://www.multiwii.com/forum/viewtopic.php?f=6&t=133
+     compatible apps:
+      https://play.google.com/store/apps/details?id=net.xrotor.andmultiwiiconf
+      https://play.google.com/store/apps/details?id=net.loide.games.bicopter
+      https://play.google.com/store/apps/details?id=com.naze32.configurator
+
+  Compatible OSD:
+    open source code, compatible with the new serial protocol
+    Rushduino:
+      more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=922
+    mobiDrone:
+      more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1498
+
+LCD config
+  OLED display
+    thanks to contributions of howardhb and Hamburger
+    more info here: http://www.multiwii.com/forum/viewtopic.php?f=7&t=1350
+
+  VT100 terminal type addition
+    thanks to contribution of Hamburger
+    more info here: http://www.multiwii.com/forum/viewtopic.php?f=7&t=1096
+
+  A multiline option is added to allow the configuration on more than 2 lines
+    useful for displays like OLED or VT100
+
+  We have now a lot of possibilities regarding LCD:
+    SERIAL3W : original 2x16 line from Sparkfun
+    TEXTSTAR : Cat's Whisker LCD_TEXTSTAR Module CW-LCD-02
+    VT100 : vt100 compatible terminal
+    ETPP : Eagle Tree Power Panel LCD
+    LCD03 : an i2c LCD
+    OLED_I2C_128x64
+
+New proc: ATmega32U4
+  Thanks to the work from ronco.
+  This proc can be found in the Arduino pro micro board, or Teensy 2.0
+  The Pro Micro is similar in size to the Pro Mini except it has a ATmega32U4 on board.
+  The USB transceiver inside the 32U4 allows us to add USB connectivity on-board.
+  ronco also designed a custom board named nanowii.
+  One of the smallest 6DOF Multiwii board with usb, which can be now purchased.
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=6&t=1337
+
+Servo:
+  Higher refresh rate:
+    Some servo (mostly digital ones) can work with a higher frequency than 50Hz.
+    The benefit to use a higher refresh rate is a sharper response.
+    ronco adapted the code to make this frequency configurable
+    more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1644
+  Hardware PWM output:
+    On MEGA boards, it's now possible to drive the gimbal servos with
+    a 11-bit PWM servo resolution. Thanks to ronco.
+    The hardware PWM output ensures a jitter free response.
+
+LED flasher
+  A way to set a flash LED sequence from Tommie
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1505
+
+Throttle expo
+  There is now another curve in the GUI to configure the Throttle expo.
+  It's a way to smooth the throttle stick response around the hover point.
+  In order to help the setting, there is a small cursor in the graph to show
+  where is the current throttle input.
+
+ACC LEVEL improvement
+  The LEVE mode is improved since 2.0 thanks to new choice of
+  other complementary filter coefficients and a floating point low pass filter
+
+Headfree checkbox:
+  It's possible to reset the headfree direction while flying via a checkbox.
+  thanks to Tommie
+
+Sensor:
+  MPU6050: there was a bug which prevents using the gyro LPF. correted now.
+  SONAR: I2C sonar SRF0x code was added but is not currently used.
+  HMC5883 axis calibration factor was added
+  NUNCHUK is fusioned with ACC in GUI
+  many new boards was also added in config.h file
+
+Internal code:
+  - the Serial part uses now less RAM (thanks to Tommie first mod)
+    RX/TX buffers are smaller than before.
+  - EEPROM parameters are stored in a struct, and are written in the
+    EEPROM in a single step.
+  - MAG declination was added by EOSBandi, to have more accurate orientation.
+    In some countries, it's really mandatory to set this variable right,
+     otherwise it's impossible to use GPS.
+  - Flag var was introduced for global boolean type variables.
+  - Hamburger introduced some "copter exemple" in order to check
+    if compilation is ok. (should be a way to remove some trivial bugs)
+  - code style (indentation, variable naming convention etc.) started
+  - GUI requires new ControlP5 library to compile
+  - interval variable activate[] is now 16 bit long
+  - new config.h structure
+
+GUI:
+  - thanks to Danal, there is now the PIN number and the propeller direction
+  drawed in the graph representation
+  - thanks to kos, we can now load and save parameters into a file
+  - there is now a reset button to set all parameters to default
+  - there is now a GUI visual feedback on all states (checkbox items)
+
+GPS code:
+  Thanks to the work of EOSBandi, we have now a working GPS code !
+  The navigational routines are based on the works of Jason Short
+  and the Arducopter team (another great open source project).
+  EOSBandi adapted it to multiwii.
+  basically, there are 2 main options for GPS: SERIAL option and I2C option.
+
+    - If you have a spare serial port AND an AtMega1280 or 2560 microcontroller
+    based FC, you can connect your GPS to that port and enable the serial GPS
+    code in the code.
+    Patrick introduced a way to switch automaticly between GUI message parsing
+    or NMEA message parsing on the same Serial port
+    (useful for promini because you can use the same port for GUI and GPS
+    in an exclusive mode)
+    
+    - You can use an I2C_GPS board, which contains a secondary AtMega328 processor
+    with a serial GPS and runs the GPS parsing and navigational computations.
+    This board communicates with the FC via the I2C bus.
+
+  more info here: http://code.google.com/p/i2c-gps-nav/downloads/list
+  and here in this huge post: http://www.multiwii.com/forum/viewtopic.php?f=8&t=649
+
+  There is also a specific GPS_FROM_OSD option:
+    it's a way to use the GPS device of OSD to feed Multiwii with GPS data
+    MIS OSD uses this functionality
+
+ESC calibration
+  experimental
+  It's a special #define which allows to calibrate all ESCs with exaclty
+   the same signal.
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=13&t=1517
+
+Telemetry
+  new telemetry manual stepping mode
+
+Arming option
+  configurable TX stick combos for arm/disarm
+  this way, it's possible to arm/disarm the multi via:
+    - one AUX switch like before
+    - YAW stick and/or ROLL stick
+
+AIRPLANE mode
+  experimental, more info here:
+  http://www.multiwii.com/forum/viewtopic.php?f=8&t=364
+  https://code.google.com/p/multiwii/wiki/MWiiAirplane
+
+HELICOPTER mode
+  experimental
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1562
+
+Dual & Single copter
+  experimental
+  more info here: http://www.multiwii.com/forum/viewtopic.php?f=8&t=1882
+
+VTAIL mode
+  motor rotation has changed:
+  Front Left & Rear Right: CCW, Front Right & Rear Left: CW , YAW_DIRECTION=1
+
+An attempt to improve the documentation via wiki
+  wiki from googlecode:
+   https://code.google.com/p/multiwii/w/list
+  wiki from multiwii.com
+   http://www.multiwii.com/wiki/index.php?title=Main_Page
+  We all know the overall documentation is still to improve :)
+
+
+
+
+
+
+
 1.9 -> 2.0
 
 ***you need at least Arduino 1.0 IDE to open the .ino file***

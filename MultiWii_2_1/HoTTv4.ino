@@ -277,7 +277,7 @@ static void hottv4UpdateBattery(uint8_t *data) {
 static void hottv4UpdateAlt(uint8_t *data, uint8_t lowByteIndex) {
   int32_t alt;
   
-  if (!GPS_fix) {
+  if (!f.GPS_FIX) {
     alt = EstAlt - referenceAltitude;
   } else {
     alt = GPS_altitude;
@@ -298,7 +298,7 @@ static void hottv4UpdateFlightTime(uint8_t *data) {
   uint16_t timeDiff = millis() - previousEAMUpdate;
   previousEAMUpdate += timeDiff;
   
-  if (armed) {
+  if (f.ARMED) {
     milliseconds += timeDiff;
     
     if (milliseconds >= 60000) {
@@ -454,9 +454,9 @@ static void hottV4SendGPSTelemetry() {
     /** GPS number of sats */
     telemetry_data[26] = GPS_numSat;
 
-    if (GPS_fix) {
-      updatePosition(telemetry_data, GPS_latitude, 9);
-      updatePosition(telemetry_data, GPS_longitude, 14);
+    if (f.GPS_FIX) {
+      updatePosition(telemetry_data, GPS_coord[LAT], 9);
+      updatePosition(telemetry_data, GPS_coord[LON], 14);
 
       /** GPS fix */
       telemetry_data[41] = 0x66; // Displays a 'f' for fix
@@ -519,15 +519,15 @@ static void hottV4SendVarioTelemetry() {
   
   if (i2c_errors_count > 0) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_ERROR_DATABUS); 
-  } else if (rcOptions[BOXGPSHOME]) {
+  } else if (1 == rcOptions[BOXGPSHOME]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_RETURN_HOME);
-  } else if (rcOptions[BOXGPSHOLD]) {
+  } else if (1 == rcOptions[BOXGPSHOLD]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_POSITION_HOLD);
-  } else if (rcOptions[BOXBARO]) {
+  } else if (1 == rcOptions[BOXBARO]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_ALT_HOLD);
-  } else if (rcOptions[BOXHEADFREE]) {
+  } else if (1 == rcOptions[BOXHEADFREE]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_HEADFREE);
-  } else if (rcOptions[BOXACC]) {
+  } else if (1 == rcOptions[BOXACC]) {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_STABLE);
   } else {
     snprintf(text, VARIO_ASCIIS+1, HOTTV4_VARIO_EMPTY);
@@ -576,7 +576,7 @@ static HoTTv4TextModeData settings[] = {
                                          {"PITCH:", 1, HoTTv4ControllerValuePID},
                                          {"YAW  :", 2, HoTTv4ControllerValuePID},
                                          {"ALT  :", PIDALT, HoTTv4ControllerValuePID},
-                                         {"GPS  :", PIDGPS, HoTTv4ControllerValuePID},
+                                         {"POS  :", PIDPOS, HoTTv4ControllerValuePID},
                                          {"LEVEL:", PIDLEVEL, HoTTv4ControllerValuePID},
                                          {"MAG  :", PIDMAG, HoTTv4ControllerValueP},
                                        }; 
@@ -704,7 +704,7 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
   crc += hottV4SendWord(label, 0);
   
   if (textData->controllerValue & (HoTTv4ControllerValueP | HoTTv4ControllerValuePID)) {
-      crc += hottV4SendFormattedPValue(P8[index], 2 == selectedCol);
+      crc += hottV4SendFormattedPValue(conf.P8[index], 2 == selectedCol);
   } else {
     crc += hottV4SendWord(" -- ", 0);
   }
@@ -712,7 +712,7 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
   crc += hottV4SendChar(' ', 0);
   
   if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
-    crc += hottV4SendFormattedIValue(I8[index], 3 == selectedCol);
+    crc += hottV4SendFormattedIValue(conf.I8[index], 3 == selectedCol);
   } else {
     crc += hottV4SendWord(" --- ", 0);
   }
@@ -720,7 +720,7 @@ static uint16_t hottV4SendFormattedPIDTextline(void* data, int8_t selectedCol) {
   crc += hottV4SendChar(' ', 0);
   
   if (textData->controllerValue & (HoTTv4ControllerValuePID)) {
-    crc += hottV4SendFormattedDValue(D8[index], 4 == selectedCol);
+    crc += hottV4SendFormattedDValue(conf.D8[index], 4 == selectedCol);
   } else {
     crc += hottV4SendWord(" - ", 0);
   }
@@ -783,11 +783,11 @@ static uint16_t hottV4SendDebugInfos(int8_t selectedRow, int8_t selectedCol) {
   crc += hottV4SendWord(formattedLine, 0);
   
   // Debug 3
-  snprintf(formattedLine, 22, " DEBUG 3   : %+04d     ", debug3);
+  snprintf(formattedLine, 22, " DEBUG 3   : %+04d     ", debug[2]);
   crc += hottV4SendTextline(formattedLine);
   
   // Debug 3
-  snprintf(formattedLine, 22, " DEBUG 4   : %+04d     ", debug4);
+  snprintf(formattedLine, 22, " DEBUG 4   : %+04d     ", debug[3]);
   crc += hottV4SendTextline(formattedLine);
   
   // I2C Error
@@ -882,13 +882,13 @@ static void hottV4UpdatePIDValueBy(int8_t row, int8_t col, int8_t val) {
   
   switch (col) {
     case 2:
-      P8[pidIndex] =  hottV4Constrain(P8[pidIndex] + val, 200);
+      conf.P8[pidIndex] =  hottV4Constrain(conf.P8[pidIndex] + val, 200);
       break;
     case 3:
-      I8[pidIndex] = hottV4Constrain(I8[pidIndex] + val, 250);
+      conf.I8[pidIndex] = hottV4Constrain(conf.I8[pidIndex] + val, 250);
       break;
     case 4:
-      D8[pidIndex] =  hottV4Constrain(D8[pidIndex] + val, 100);;
+      conf.D8[pidIndex] =  hottV4Constrain(conf.D8[pidIndex] + val, 100);;
       break;
   } 
 }
@@ -943,7 +943,7 @@ static void hottV4HandleTextMode() {
   // Saftey measure because it takes way to long to send data in text mode
   // furthermore PID settings will be editable in future and this is something you 
   // dont wanna do up in the air.
-  if (!armed) {    
+  if (!f.ARMED) {    
     static uint8_t row = 1;
     static uint8_t col = 1;
     static uint8_t store = 0;
@@ -984,7 +984,7 @@ static void hottV4HandleTextMode() {
       
         if (store > 0) {
           store = 0;
-          writeParams();
+          writeParams(1);
         }
       }
       break;

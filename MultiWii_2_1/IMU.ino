@@ -9,31 +9,30 @@ void computeIMU () {
   //we separate the 2 situations because reading gyro values with a gyro only setup can be acchieved at a higher rate
   //gyro+nunchuk: we must wait for a quite high delay betwwen 2 reads to get both WM+ and Nunchuk data. It works with 3ms
   //gyro only: the delay to read 2 consecutive values can be reduced to only 0.65ms
-  if (!ACC && nunchuk) {
+  #if defined(NUNCHUCK)
     annexCode();
     while((micros()-timeInterleave)<INTERLEAVING_DELAY) ; //interleaving delay between 2 consecutive reads
     timeInterleave=micros();
-    WMP_getRawADC();
+    ACC_getADC();
     getEstimatedAttitude(); // computation time must last less than one interleaving delay
     while((micros()-timeInterleave)<INTERLEAVING_DELAY) ; //interleaving delay between 2 consecutive reads
     timeInterleave=micros();
-    while(WMP_getRawADC() != 1) ; // For this interleaving reading, we must have a gyro update at this point (less delay)
+    f.NUNCHUKDATA = 1;
+    while(f.NUNCHUKDATA) ACC_getADC(); // For this interleaving reading, we must have a gyro update at this point (less delay)
 
     for (axis = 0; axis < 3; axis++) {
       // empirical, we take a weighted value of the current and the previous values
       // /4 is to average 4 values, note: overflow is not possible for WMP gyro here
-      gyroData[axis] = (gyroADC[axis]*3+gyroADCprevious[axis]+2)/4;
+      gyroData[axis] = (gyroADC[axis]*3+gyroADCprevious[axis])/4;
       gyroADCprevious[axis] = gyroADC[axis];
     }
-  } else {
+  #else
     #if ACC
       ACC_getADC();
       getEstimatedAttitude();
     #endif
     #if GYRO
       Gyro_getADC();
-    #else
-      WMP_getRawADC();
     #endif
     for (axis = 0; axis < 3; axis++)
       gyroADCp[axis] =  gyroADC[axis];
@@ -46,27 +45,24 @@ void computeIMU () {
     }
     #if GYRO
       Gyro_getADC();
-    #else
-      WMP_getRawADC();
     #endif
     for (axis = 0; axis < 3; axis++) {
       gyroADCinter[axis] =  gyroADC[axis]+gyroADCp[axis];
       // empirical, we take a weighted value of the current and the previous values
-      gyroData[axis] = (gyroADCinter[axis]+gyroADCprevious[axis]+1)/3;
+      gyroData[axis] = (gyroADCinter[axis]+gyroADCprevious[axis])/3;
       gyroADCprevious[axis] = gyroADCinter[axis]/2;
       if (!ACC) accADC[axis]=0;
     }
-  }
+  #endif
   #if defined(GYRO_SMOOTHING)
-    static uint8_t Smoothing[3]  = GYRO_SMOOTHING; // How much to smoothen with per axis
     static int16_t gyroSmooth[3] = {0,0,0};
     for (axis = 0; axis < 3; axis++) {
-      gyroData[axis] = (gyroSmooth[axis]*(Smoothing[axis]-1)+gyroData[axis]+1)/Smoothing[axis];
+      gyroData[axis] = (int16_t) ( ( (int32_t)((int32_t)gyroSmooth[axis] * (conf.Smoothing[axis]-1) )+gyroData[axis]+1 ) / conf.Smoothing[axis]);
       gyroSmooth[axis] = gyroData[axis];
     }
   #elif defined(TRI)
     static int16_t gyroYawSmooth = 0;
-    gyroData[YAW] = (gyroYawSmooth*2+gyroData[YAW]+1)/3;
+    gyroData[YAW] = (gyroYawSmooth*2+gyroData[YAW])/3;
     gyroYawSmooth = gyroData[YAW];
   #endif
 }
@@ -86,34 +82,34 @@ void computeIMU () {
 // Currently Magnetometer uses separate CF which is used only
 // for heading approximation.
 //
-// Modified: 19/04/2011  by ziss_dm
-// Version: V1.1
-//
-// code size reduction and tmp vector intermediate step for vector rotation computation: October 2011 by Alex
 // **************************************************
 
 //******  advanced users settings *******************
 /* Set the Low Pass Filter factor for ACC */
 /* Increasing this value would reduce ACC noise (visible in GUI), but would increase ACC lag time*/
 /* Comment this if  you do not want filter at all.*/
-/* Default WMC value: 8*/
-#define ACC_LPF_FACTOR 4
+#ifndef ACC_LPF_FACTOR
+  #define ACC_LPF_FACTOR 100
+#endif
 
 /* Set the Low Pass Filter factor for Magnetometer */
 /* Increasing this value would reduce Magnetometer noise (not visible in GUI), but would increase Magnetometer lag time*/
 /* Comment this if  you do not want filter at all.*/
-/* Default WMC value: n/a*/
-//#define MG_LPF_FACTOR 4
+#ifndef MG_LPF_FACTOR
+  //#define MG_LPF_FACTOR 4
+#endif
 
 /* Set the Gyro Weight for Gyro/Acc complementary filter */
 /* Increasing this value would reduce and delay Acc influence on the output of the filter*/
-/* Default WMC value: 300*/
-#define GYR_CMPF_FACTOR 310.0f
+#ifndef GYR_CMPF_FACTOR
+  #define GYR_CMPF_FACTOR 400.0f
+#endif
 
 /* Set the Gyro Weight for Gyro/Magnetometer complementary filter */
 /* Increasing this value would reduce and delay Magnetometer influence on the output of the filter*/
-/* Default WMC value: n/a*/
-#define GYR_CMPFM_FACTOR 200.0f
+#ifndef GYR_CMPFM_FACTOR
+  #define GYR_CMPFM_FACTOR 200.0f
+#endif
 
 //****** end of advanced users settings *************
 
@@ -185,7 +181,7 @@ void getEstimatedAttitude(){
   static int16_t mgSmooth[3]; 
 #endif
 #if defined(ACC_LPF_FACTOR)
-  static int16_t accTemp[3];  //projection of smoothed and normalized magnetic vector on x/y/z axis, as measured by magnetometer
+  static float accLPF[3];
 #endif
   static uint16_t previousT;
   uint16_t currentT = micros();
@@ -198,8 +194,8 @@ void getEstimatedAttitude(){
   for (axis = 0; axis < 3; axis++) {
     deltaGyroAngle[axis] = gyroADC[axis]  * scale;
     #if defined(ACC_LPF_FACTOR)
-      accTemp[axis] = (accTemp[axis] - (accTemp[axis] >>ACC_LPF_FACTOR)) + accADC[axis];
-      accSmooth[axis] = accTemp[axis]>>ACC_LPF_FACTOR;
+      accLPF[axis] = accLPF[axis] * (1.0f - (1.0f/ACC_LPF_FACTOR)) + accADC[axis] * (1.0f/ACC_LPF_FACTOR);
+      accSmooth[axis] = accLPF[axis];
       #define ACC_VALUE accSmooth[axis]
     #else  
       accSmooth[axis] = accADC[axis];
@@ -217,30 +213,24 @@ void getEstimatedAttitude(){
     #endif
   }
   accMag = accMag*100/((int32_t)acc_1G*acc_1G);
-  
+
   rotateV(&EstG.V,deltaGyroAngle);
   #if MAG
     rotateV(&EstM.V,deltaGyroAngle);
   #endif 
 
-  if ( abs(accSmooth[ROLL])<acc_25deg && abs(accSmooth[PITCH])<acc_25deg && accSmooth[YAW]>0)
-    smallAngle25 = 1;
-  else
-    smallAngle25 = 0;
+  if ( abs(accSmooth[ROLL])<acc_25deg && abs(accSmooth[PITCH])<acc_25deg && accSmooth[YAW]>0) {
+    f.SMALL_ANGLES_25 = 1;
+  } else {
+    f.SMALL_ANGLES_25 = 0;
+  }
 
   // Apply complimentary filter (Gyro drift correction)
   // If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
   // To do that, we just skip filter, as EstV already rotated by Gyro
-  if ( ( 36 < accMag && accMag < 196 ) || smallAngle25 )
+  if ( ( 36 < accMag && accMag < 196 ) || f.SMALL_ANGLES_25 )
     for (axis = 0; axis < 3; axis++) {
       int16_t acc = ACC_VALUE;
-      #if !defined(TRUSTED_ACCZ)
-        if (smallAngle25 && axis == YAW)
-          //We consider ACCZ = acc_1G when the acc on other axis is small.
-          //It's a tweak to deal with some configs where ACC_Z tends to a value < acc_1G when high throttle is applied.
-          //This tweak applies only when the multi is not in inverted position
-          acc = acc_1G;      
-      #endif
       EstG.A[axis] = (EstG.A[axis] * GYR_CMPF_FACTOR + acc) * INV_GYR_CMPF_FACTOR;
     }
   #if MAG
@@ -251,9 +241,14 @@ void getEstimatedAttitude(){
   // Attitude of the estimated vector
   angle[ROLL]  =  _atan2(EstG.V.X , EstG.V.Z) ;
   angle[PITCH] =  _atan2(EstG.V.Y , EstG.V.Z) ;
+
   #if MAG
     // Attitude of the cross product vector GxM
-    heading = _atan2( EstG.V.X * EstM.V.Z - EstG.V.Z * EstM.V.X , EstG.V.Z * EstM.V.Y - EstG.V.Y * EstM.V.Z  ) / 10;
+    heading = _atan2( EstG.V.X * EstM.V.Z - EstG.V.Z * EstM.V.X , EstG.V.Z * EstM.V.Y - EstG.V.Y * EstM.V.Z  );
+    heading += MAG_DECLINIATION * 10; //add declination
+    heading = heading /10;
+    if ( heading > 180)      heading = heading - 360;
+    else if (heading < -180) heading = heading + 360;
   #endif
 }
 
@@ -270,9 +265,9 @@ void getEstimatedAltitude(){
   static int32_t BaroHigh,BaroLow;
   int32_t temp32;
   int16_t last;
-  
-  if (currentTime < deadLine) return;
-  deadLine = currentTime + UPDATE_INTERVAL; 
+
+  if (abs(currentTime - deadLine) < UPDATE_INTERVAL) return;
+  deadLine = currentTime; 
 
   //**** Alt. Set Point stabilization PID ****
   //calculate speed for D calculation
@@ -289,7 +284,7 @@ void getEstimatedAltitude(){
 
   BaroPID = 0;
   //D
-  temp32 = D8[PIDALT]*(BaroHigh - BaroLow) / 40;
+  temp32 = conf.D8[PIDALT]*(BaroHigh - BaroLow) / 40;
   BaroPID-=temp32;
 
   EstAlt = BaroHigh*10/(BARO_TAB_SIZE/2);
@@ -298,11 +293,11 @@ void getEstimatedAltitude(){
   if (abs(temp32) < 10 && abs(BaroPID) < 10) BaroPID = 0;  //remove small D parametr to reduce noise near zero position
   
   //P
-  BaroPID += P8[PIDALT]*constrain(temp32,(-2)*P8[PIDALT],2*P8[PIDALT])/100;   
+  BaroPID += conf.P8[PIDALT]*constrain(temp32,(-2)*conf.P8[PIDALT],2*conf.P8[PIDALT])/100;   
   BaroPID = constrain(BaroPID,-150,+150); //sum of P and D should be in range 150
 
   //I
-  errorAltitudeI += temp32*I8[PIDALT]/50;
+  errorAltitudeI += temp32*conf.I8[PIDALT]/50;
   errorAltitudeI = constrain(errorAltitudeI,-30000,30000);
   temp32 = errorAltitudeI / 500; //I in range +/-60
   BaroPID+=temp32;
