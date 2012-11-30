@@ -4,12 +4,16 @@
 
 #define HOTTV4_UPDATE_INTERVAL 2000
 
-#if defined(BARO) || defined (GPS)
+#if defined (BARO) || defined (GPS)
   #define HOTTV4ALTITUDE
 #endif
 
-#if defined(MAG) || defined (GPS)
+#if defined (MAG) || defined (GPS)
   #define HOTTV4DIR
+#endif
+
+#if (defined (HOTTV4_VOLTAGE_MAX) || defined (HOTTV4_VOLTAGE_WARNING)) && !defined (HOTTV4_EAM)
+  #error "In order to use voltage warning, EAM needs to be defined."
 #endif
 
 /** ###### HoTT module specific settings ###### */
@@ -122,6 +126,8 @@ static uint16_t milliseconds = 0;
 static uint8_t hottV4SerialAvailable() {
   #if defined (MEGA)
     return SerialAvailable(3);
+  #elif defined (PROMICRO)
+    return SerialAvailable(1);
   #else
     return SerialAvailable(0);
   #endif
@@ -134,6 +140,9 @@ static void hottV4EnableReceiverMode() {
   #if defined (MEGA)  
     UCSR3B &= ~_BV(TXEN3);
     UCSR3B |= _BV(RXEN3);
+  #elif defined (PROMICRO)
+    UCSR1B &= ~_BV(TXEN1);
+    UCSR1B |= _BV(RXEN1);
   #else
     UCSR0B &= ~_BV(TXEN0);
     UCSR0B |= _BV(RXEN0);
@@ -147,6 +156,9 @@ static void hottV4EnableTransmitterMode() {
   #if defined (MEGA)  
     UCSR3B &= ~_BV(RXEN3);
     UCSR3B |= _BV(TXEN3);
+  #elif defined (PROMICRO)
+    UCSR1B &= ~_BV(RXEN1);
+    UCSR1B |= _BV(TXEN1);
   #else
     UCSR0B &= ~_BV(RXEN0);
     UCSR0B |= _BV(TXEN0); 
@@ -160,6 +172,9 @@ static void hottV4SerialWrite(uint8_t data) {
   #if defined (MEGA)
     loop_until_bit_is_set(UCSR3A, UDRE3);
     UDR3 = data;
+  #elif defined (PROMICRO)
+    loop_until_bit_is_set(UCSR1A, UDRE1);
+    UDR1 = data;
   #else
     loop_until_bit_is_set(UCSR0A, UDRE0);
     UDR0 = data;
@@ -189,6 +204,9 @@ static void hottV4LoopUntilRegistersReady() {
   #if defined (MEGA)
     loop_until_bit_is_set(UCSR3A, UDRE3);
     loop_until_bit_is_set(UCSR3A, TXC3);
+  #elif defined (PROMICRO)
+    loop_until_bit_is_set(UCSR1A, UDRE1);
+    loop_until_bit_is_set(UCSR1A, TXC1);
   #else
     loop_until_bit_is_set(UCSR0A, UDRE0);
     loop_until_bit_is_set(UCSR0A, TXC0);
@@ -345,6 +363,7 @@ void hottv4Setup() {
  *                HoTTv4 EAM Module                                      *
  * ##################################################################### */
 
+#if defined (HOTTV4_EAM)
 /**
  * Main method to send EAM telemetry data
  */
@@ -389,11 +408,13 @@ static void hottV4SendEAMTelemetry() {
   // Write out telemetry data as Electric Air Module to serial           
   hottV4SendBinary(telemetry_data);
 }
+#endif
 
 /* ##################################################################### *
  *                HoTTv4 GPS Module                                      *
  * ##################################################################### */
 
+#if defined(HOTTV4_GPS)
 /**
  * Converts unsigned long representation of GPS coordinate back to
  * N Deg MM.SSSS representation and puts it into GPS data frame.
@@ -481,11 +502,13 @@ static void hottV4SendGPSTelemetry() {
   // Write out telemetry data as GPS Module to serial           
   hottV4SendBinary(telemetry_data);
 }
+#endif
 
 /* ##################################################################### *
  *                HoTTv4 Vario Module                                    *
  * ##################################################################### */
 
+#if defined (HOTTV4_VARIO)
 /**
  * Main method to send Vario telemetry data
  */
@@ -547,10 +570,12 @@ static void hottV4SendVarioTelemetry() {
   // Write out telemetry data as Vario Module to serial           
   hottV4SendBinary(telemetry_data);
 }
+#endif
 
 /* ##################################################################### *
  *                HoTTv4 Text Mode                                       *
  * ##################################################################### */
+#if defined (HOTTV4_PID)
 
 #define HOTTV4_TEXT_PAGE_PID 0
 #define HOTTV4_TEXT_PAGE_DEBUG 1
@@ -1012,6 +1037,7 @@ static void hottV4HandleTextMode() {
     }
   }
 }
+#endif
 
 /**
  * Check if enough time has been elapsed since last telemetry update to
@@ -1034,27 +1060,35 @@ uint8_t canSendTelemetry() {
  */
 uint8_t hottV4Hook(uint8_t serialData) {
   switch (serialData) {
+    #if defined (HOTTV4_GPS)
     case HOTTV4_GPS_MODULE:
       if (canSendTelemetry()) {
         hottV4SendGPSTelemetry();
       }
       break;
-    
+    #endif
+
+    #if defined (HOTTV4_EAM)
     case HOTTV4_ELECTRICAL_AIR_MODULE:
       if (canSendTelemetry()) {
         hottV4SendEAMTelemetry();
       }
       break;
-         
+    #endif
+
+    #if defined (HOTTV4_VARIO)
     case HOTTV4_VARIO_MODULE:
       if (canSendTelemetry()) {
         hottV4SendVarioTelemetry();
       }
       break;
-    
+    #endif
+
+    #if defined (HOTTV4_PID)
     case HOTTV4_ELECTRICAL_AIR_TEXTMODE:
       hottV4HandleTextMode();
       break;
+    #endif
 
     default:
       return serialData;

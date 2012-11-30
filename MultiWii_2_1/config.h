@@ -3,8 +3,14 @@
 /*************************************************************************************************/
 
 #define HOTTV4_TELEMETRY // Define for use of Graupner HoTT v4 telemetry usage
+//#define HOTTV4_EAM // Define to enable Electric Air Module
+//#define HOTTV4_GPS // Define to enable GPS Module
+//#define HOTTV4_VARIO // Define to enable Vario Module
+//#define HOTTV4_SETTINGS // Define to enable PID changing capabilities
 #define HOTTV4_VOLTAGE_MAX 126 // Max. voltage of used batttery, e.g. LiPo 3S = 12,6V
 #define HOTTV4_VOLTAGE_WARNING 103 // Battery level when alarm is triggered (10,3V)
+
+
 
 /* this file consists of several sections
  * to create a working combination you must at least make your choices in section 1.
