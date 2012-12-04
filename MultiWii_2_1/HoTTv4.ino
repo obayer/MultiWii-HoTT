@@ -189,6 +189,8 @@ static void hottV4SerialWrite(uint8_t data) {
 static uint8_t hottV4SerialRead() {
   #if defined (MEGA)
     return SerialRead(3);
+  #elif defined (PROMICRO)
+    return SerialRead(1);
   #else
     return SerialRead(0);
   #endif
@@ -346,6 +348,14 @@ void hottv4Init() {
     PORTJ |= (1 << 0);
   
     SerialOpen(3, 19200);
+  #elif defined (PROMICRO)
+    /* Enable PullUps on RX3
+     * without signal is to weak to be recognized
+     */
+    DDRD &= ~(1 << 2);
+    PORTD |= (1 << 2);
+  
+    SerialOpen(1, 19200);
   #endif
 }
 
