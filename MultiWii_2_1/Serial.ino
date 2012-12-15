@@ -118,7 +118,7 @@ void serialCom() {
     if (bytesTXBuff > TX_BUFFER_SIZE - 40 ) return; // ensure there is enough free TX buffer to go further (40 bytes margin)
     c = SerialRead(0);
 
-    #if defined(HOTTV4_TELEMETRY) && !defined(MEGA)
+    #if defined(HOTTV4_RXTX_SHARED)
       c = hottV4Hook(c);
     #endif
 

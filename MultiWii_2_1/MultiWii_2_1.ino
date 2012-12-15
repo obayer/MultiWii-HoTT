@@ -495,9 +495,9 @@ void annexCode() { // this code is excetuted at each loop and won't interfere wi
       }
     #endif
   #endif
-  #if defined (HOTTV4_TELEMETRY) && defined (MEGA)
-    if (SerialAvailable(3)) {
-      hottV4Hook(SerialRead(3));
+  #if defined (HOTTV4_RXTX_SEPARATED) 
+    if (hottV4SerialAvailable()) {
+      hottV4Hook(hottV4SerialRead());
     }
   #endif
 }

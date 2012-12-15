@@ -12,6 +12,12 @@
   #define HOTTV4DIR
 #endif
 
+#if (defined (MEGA) || defined (PROMICRO))
+  #define HOTTV4_RXTX_SEPARATED
+#else 
+  #define HOTTV4_RXTX_SHARED
+#endif
+
 #if (defined (HOTTV4_VOLTAGE_MAX) || defined (HOTTV4_VOLTAGE_WARNING)) && !defined (HOTTV4_EAM)
   #error "In order to use voltage warning, EAM needs to be defined."
 #endif
@@ -121,9 +127,9 @@ static uint16_t milliseconds = 0;
 
 /**
  * Wrap serial available functions for
- * MEGA boards and remaining boards.
+ * MEGA/ProMicro boards and remaining boards.
  */
-static uint8_t hottV4SerialAvailable() {
+uint8_t hottV4SerialAvailable() {
   #if defined (MEGA)
     return SerialAvailable(3);
   #elif defined (PROMICRO)
@@ -166,6 +172,19 @@ static void hottV4EnableTransmitterMode() {
 }
 
 /**
+ * Read from Serial interface
+ */
+uint8_t hottV4SerialRead() {
+  #if defined (MEGA)
+    return SerialRead(3);
+  #elif defined (PROMICRO)
+    return SerialRead(1);
+  #else
+    return SerialRead(0);
+  #endif
+}
+
+/**
  * Writes out given data to data register.
  */
 static void hottV4SerialWrite(uint8_t data) {
@@ -181,19 +200,6 @@ static void hottV4SerialWrite(uint8_t data) {
   #endif
   
   delayMicroseconds(HOTTV4_TX_DELAY);
-}
-
-/**
- * Read from Serial interface
- */
-static uint8_t hottV4SerialRead() {
-  #if defined (MEGA)
-    return SerialRead(3);
-  #elif defined (PROMICRO)
-    return SerialRead(1);
-  #else
-    return SerialRead(0);
-  #endif
 }
 
 /**
